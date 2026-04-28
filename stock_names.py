@@ -1,4 +1,5 @@
 import requests
+import threading
 
 _cache = {}  # {name: code}
 
@@ -42,3 +43,7 @@ def resolve(text: str):
     if not _cache:
         _build_cache()
     return _cache.get(text)
+
+
+# 啟動時背景預載，不阻塞主程式
+threading.Thread(target=_build_cache, daemon=True).start()
