@@ -1,49 +1,18 @@
-import requests
-import threading
+import json
+import os
 
-_cache = {}  # {name: code}
+_cache = {}
 
-
-def _build_cache():
+def _load():
     global _cache
-    mapping = {}
-    # 上市
-    try:
-        r = requests.get(
-            "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
-            headers={"User-Agent": "Mozilla/5.0"}, timeout=10
-        )
-        for d in r.json():
-            name = d.get("Name", "").strip()
-            code = d.get("Code", "").strip()
-            if name and code:
-                mapping[name] = code
-    except Exception:
-        pass
-    # 上櫃
-    try:
-        r = requests.get(
-            "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
-            headers={"User-Agent": "Mozilla/5.0"}, timeout=10
-        )
-        for d in r.json():
-            name = d.get("CompanyName", "").strip()
-            code = d.get("SecuritiesCompanyCode", "").strip()
-            if name and code:
-                mapping[name] = code
-    except Exception:
-        pass
-    _cache = mapping
+    path = os.path.join(os.path.dirname(__file__), "stock_map.json")
+    with open(path, "r", encoding="utf-8") as f:
+        _cache = json.load(f)
 
+_load()
 
 def resolve(text: str):
     text = text.strip()
     if text.isdigit():
         return text
-    if not _cache:
-        _build_cache()
     return _cache.get(text)
-
-
-# 啟動時背景預載，不阻塞主程式
-threading.Thread(target=_build_cache, daemon=True).start()
