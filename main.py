@@ -6,6 +6,7 @@ from analyzer import analyze
 from twse_fetcher import fetch
 from claude_analyzer import deep_analyze
 from stock_names import resolve
+from commands import cmd_market, cmd_holdings, cmd_scan
 import pandas as pd
 
 LINE_TOKEN = os.environ["LINE_TOKEN"]
@@ -87,6 +88,19 @@ async def webhook(request: Request):
             result = deep_analyze(code, name, summary)
             label = f"{name}（{code}）" if name else code
             push(f"【{label} 深度分析】\n\n{result}")
+            continue
+
+        # # 固定指令
+        if text == "#大盤":
+            push(cmd_market())
+            continue
+        if text == "#持股":
+            push("查詢持股中...")
+            push(cmd_holdings())
+            continue
+        if text == "#掃描":
+            push("掃描觀察清單中，請稍候...")
+            push(cmd_scan())
             continue
 
         # # 標準分析
