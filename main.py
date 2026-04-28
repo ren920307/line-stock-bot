@@ -45,10 +45,15 @@ def build_price_summary(code: str) -> str:
     high60 = df["High"].tail(60).max()
     low60  = df["Low"].tail(60).min()
     recent = df.tail(10)[["Open","High","Low","Close","Volume"]].round(1).to_string()
+    is_limit = chg_pct >= 9.5
+    chg_label = f"漲停 +{chg_pct:.1f}%" if is_limit else f"{chg_pct:+.1f}%"
     return (
-        f"今日 收:{last['Close']:.0f}（{chg_pct:+.1f}%）開:{last['Open']:.0f} 高:{last['High']:.0f} 低:{last['Low']:.0f} 量:{int(last['Volume'])//1000}張\n"
-        f"MA5:{last['MA5']:.1f}  MA20:{last['MA20']:.1f}  MA60:{last['MA60']:.1f}\n"
-        f"60日高:{high60:.0f}  低:{low60:.0f}\n"
+        f"【今日數據】\n"
+        f"收：{last['Close']:.0f}（{chg_label}）\n"
+        f"開：{last['Open']:.1f}　高：{last['High']:.1f}　低：{last['Low']:.1f}\n"
+        f"量：{int(last['Volume'])//1000:,}張\n"
+        f"MA5：{last['MA5']:.1f}　MA20：{last['MA20']:.1f}　MA60：{last['MA60']:.1f}\n"
+        f"60日高：{high60:.0f}　低：{low60:.0f}\n"
         f"\n近10日K線：\n{recent}"
     )
 
