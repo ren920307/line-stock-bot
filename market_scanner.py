@@ -173,7 +173,9 @@ def run_daily_scan() -> str:
     # 組推播訊息
     lines = [
         f"【全市場強勢掃描】{date.today().strftime('%m/%d')}",
-        f"掃描 {len(stocks)} 檔 → 觀察清單 {len(top15)} 檔\n",
+        f"掃描 {len(stocks)} 檔 → 觀察清單 {len(top15)} 檔",
+        f"",
+        f"篩選條件：站上MA20 / 漲幅>2% / 量比>1.2x",
     ]
     for i, s in enumerate(top15, 1):
         lines.append(
@@ -183,13 +185,22 @@ def run_daily_scan() -> str:
         )
 
     lines.append(f"\n★ 明日重點關注 TOP 5 ★")
-    lines.append("（MA5>MA20、量比>1.5x、近3日2紅）\n")
+    lines.append("條件：MA5>MA20 / 漲>3% / 量比>1.5x / 近3日2紅")
+    lines.append("")
     for i, s in enumerate(top5, 1):
         lines.append(
             f"  {i}. {s['name']}（{s['code']}）"
             f"{s['close']:.0f} +{s['chg_pct']:.1f}%"
             f" 量比{s['vol_ratio']:.1f}x"
         )
-    lines.append("\n右側策略：等回測不破再進，停損前低。")
+
+    lines.append(
+        "\n【右側操作攻略】\n"
+        "① 不追今日強勢，等明日回測\n"
+        "② 回測到今日收盤價附近不破 → 進場\n"
+        "③ 停損：跌破今日最低點收盤\n"
+        "④ 第一筆小倉，撐穩再加碼（倒金字塔）\n"
+        "⑤ 每次加碼後停損上移"
+    )
 
     return "\n".join(lines)
