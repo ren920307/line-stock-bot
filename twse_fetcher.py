@@ -1,12 +1,19 @@
+"""
+歷史 K 線抓取：Fugle API 優先，twstock 作為 fallback。
+
+Render（Linux）上 twstock 連 TWSE/TPEx 常被擋，所以預設用 Fugle 官方 API。
+本機若沒設 FUGLE_API_KEY，會自動退回 twstock。
+"""
 import pandas as pd
-import twstock
 from datetime import date
 
+from fugle_fetcher import fetch_history as _fugle_fetch
 
-def fetch(code: str, days: int = 120) -> pd.DataFrame:
+
+def _twstock_fetch(code: str, days: int = 120) -> pd.DataFrame:
     try:
+        import twstock
         s = twstock.Stock(str(code))
-        # 預設只有當月，需要往前多抓
         today = date.today()
         months_needed = max(6, days // 20)
         year = today.year
@@ -28,3 +35,10 @@ def fetch(code: str, days: int = 120) -> pd.DataFrame:
         return df
     except Exception:
         return pd.DataFrame()
+
+
+def fetch(code: str, days: int = 120) -> pd.DataFrame:
+    df = _fugle_fetch(code, days)
+    if df is not None and not df.empty:
+        return df
+    return _twstock_fetch(code, days)

@@ -24,7 +24,11 @@ def fetch_history(code: str, days: int = 120) -> pd.DataFrame:
             "to": end.isoformat(),
         }, timeout=10)
         data = r.json()
-        candles = data.get("data", {}).get("candles", data.get("candles", []))
+        candles = data.get("data")
+        if isinstance(candles, dict):
+            candles = candles.get("candles", [])
+        if not candles:
+            candles = data.get("candles", [])
         if not candles:
             return pd.DataFrame()
         df = pd.DataFrame(candles)
