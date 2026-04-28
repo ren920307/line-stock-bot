@@ -104,7 +104,9 @@ async def webhook(request: Request):
                 continue
             result = deep_analyze(code, name, summary)
             label = f"{name}（{code}）" if name else code
-            push(f"【{label} 深度分析】\n\n{result}")
+            # 取 summary 中的今日數據區塊（第一段，不含近10日K線）
+            today_block = summary.split("\n近10日")[0]
+            push(f"【{label} 深度分析】\n\n{today_block}\n\n{result}")
             continue
 
         # # 固定指令
