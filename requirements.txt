@@ -4,3 +4,4 @@ twstock
 pandas
 requests
 beautifulsoup4
+fugle-marketdata
