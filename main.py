@@ -83,8 +83,11 @@ async def webhook(request: Request):
                 push(f"找不到「{query}」，請用代號或股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            push("Claude 深度分析中，約需 10 秒...")
+            push("資料抓取中，約需 15 秒...")
             summary = build_price_summary(code)
+            if "無法取得" in summary:
+                push(f"抱歉，{query} 的 K 線資料抓取失敗，請稍後再試或改用代號查詢。")
+                continue
             result = deep_analyze(code, name, summary)
             label = f"{name}（{code}）" if name else code
             push(f"【{label} 深度分析】\n\n{result}")
