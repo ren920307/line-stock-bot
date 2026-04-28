@@ -122,13 +122,12 @@ def run_daily_scan() -> str:
             continue
 
     # ── 第一層：15 檔（較鬆）──
-    # 站上MA20、漲幅>2%、量比>1.2x、非漲停
+    # 站上MA20、漲幅>2%、量比>1.2x（接受漲停）
     layer1 = [
         s for s in enriched
         if s["close"] > s["ma20"]
         and s["chg_pct"] >= 2.0
         and s["vol_ratio"] >= 1.2
-        and s["chg_pct"] < 9.5
     ]
     # 加權分數：漲幅50% + 量比30% + 連紅20%
     max_chg = max((s["chg_pct"] for s in layer1), default=1)
@@ -143,11 +142,11 @@ def run_daily_scan() -> str:
     top15 = layer1[:15]
 
     # ── 第二層：TOP 5（嚴）──
-    # MA5>MA20、漲幅3-9%、量比>1.5x、近3日至少2日收紅
+    # MA5>MA20、漲幅>3%、量比>1.5x、近3日至少2日收紅（接受漲停）
     top5 = [
         s for s in top15
         if s["ma5"] and s["ma5"] > s["ma20"]
-        and 3.0 <= s["chg_pct"] < 9.5
+        and s["chg_pct"] >= 3.0
         and s["vol_ratio"] >= 1.5
         and s["green3"] >= 2
     ][:5]
