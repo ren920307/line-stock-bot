@@ -1,10 +1,7 @@
 """
-全市場強勢股掃描：
-1. TWSE + TPEx 一次抓全市場收盤資料
-2. 過濾 ETF、權證、零股等非個股
-3. 按漲幅+量比加權排序，取前 60 候選
-4. Fugle 補抓 MA20，篩掉跌破 MA20 的
-5. 取最強 30 檔存進 watchlist.json
+全市場強勢股掃描（右側交易邏輯）：
+第一層 15 檔：站上MA20、漲幅>2%、量比>1.2x、非漲停
+第二層 TOP5：MA5>MA20、漲幅3-9%、量比>1.5x、近3日至少2日收紅
 """
 import requests
 import pandas as pd
@@ -16,23 +13,21 @@ from fugle_fetcher import fetch_history
 
 
 def _is_stock(code: str, name: str) -> bool:
-    """過濾掉 ETF、債券、權證、特別股"""
-    if re.match(r'^0\d{4}', code):  # ETF (00xx)
+    if re.match(r'^0\d{4}', code):
         return False
-    if re.match(r'^\d{6}', code):   # 權證 (6碼)
+    if re.match(r'^\d{6}', code):
         return False
     if any(x in name for x in ["ETF", "債", "權", "特", "存託"]):
         return False
-    if not re.match(r'^\d{4}$', code):  # 只要純4碼
+    if not re.match(r'^\d{4}$', code):
         return False
     return True
 
 
 def fetch_market_data() -> list:
-    """抓上市+上櫃全市場當日收盤資料"""
     stocks = []
 
-    # 上市 TWSE
+    # 上市
     try:
         r = requests.get(
             "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
@@ -48,7 +43,7 @@ def fetch_market_data() -> list:
                 change = float(d["Change"])
                 vol    = int(d["TradeVolume"]) // 1000
                 chg_pct = change / (close - change) * 100 if (close - change) != 0 else 0
-                if chg_pct <= 0 or vol < 100:  # 只要上漲、成交量 >100 張
+                if chg_pct <= 0 or vol < 100:
                     continue
                 stocks.append({"code": code, "name": name, "close": close,
                                 "chg_pct": chg_pct, "volume": vol, "market": "TSE"})
@@ -57,7 +52,7 @@ def fetch_market_data() -> list:
     except Exception:
         pass
 
-    # 上櫃 TPEx
+    # 上櫃
     try:
         r = requests.get(
             "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
@@ -85,84 +80,117 @@ def fetch_market_data() -> list:
     return stocks
 
 
-def run_daily_scan() -> str:
-    """全市場掃描，嚴選 30 檔強勢股更新 watchlist"""
+def _enrich(s: dict, df: pd.DataFrame) -> dict:
+    """補充 MA5、MA20、量比、近3日收紅數"""
+    df["MA5"]  = df["Close"].rolling(5).mean()
+    df["MA20"] = df["Close"].rolling(20).mean()
+    last = df.iloc[-1]
 
+    avg_vol = df["Volume"].tail(10).mean()
+    vol_ratio = s["volume"] * 1000 / avg_vol if avg_vol > 0 else 0
+
+    # 近 3 日收紅（收 > 開）
+    recent3 = df.tail(3)
+    green_days = int((recent3["Close"] >= recent3["Open"]).sum())
+
+    s["ma5"]       = round(float(last["MA5"]),  1) if not pd.isna(last["MA5"])  else None
+    s["ma20"]      = round(float(last["MA20"]), 1) if not pd.isna(last["MA20"]) else None
+    s["vol_ratio"] = round(vol_ratio, 1)
+    s["green3"]    = green_days
+    return s
+
+
+def run_daily_scan() -> str:
     stocks = fetch_market_data()
     if not stocks:
         return "全市場資料抓取失敗，請稍後再試。"
 
-    # 計算各股平均成交量（用當日量作為基準，之後可改為比對均量）
-    # 先按漲幅排序取前 80 候選（保留緩衝給 MA20 篩選）
-    candidates = sorted(stocks, key=lambda x: x["chg_pct"], reverse=True)[:80]
+    # 候選：按漲幅排序取前 60，用 Fugle 補技術指標
+    candidates = sorted(stocks, key=lambda x: x["chg_pct"], reverse=True)[:60]
 
-    # 用 Fugle 補抓 MA20 與均量（最多 60 次，取前 60 候選）
-    qualified = []
-    for s in candidates[:60]:
+    enriched = []
+    for s in candidates:
         try:
             df = fetch_history(s["code"], days=25)
-            if df.empty:
+            if df.empty or len(df) < 5:
                 continue
-            df["MA20"] = df["Close"].rolling(20).mean()
-            last = df.iloc[-1]
-            ma20 = last["MA20"]
-            if pd.isna(ma20):
+            s = _enrich(s, df)
+            if s["ma20"] is None:
                 continue
-            if s["close"] <= ma20:
-                continue
-            avg_vol = df["Volume"].tail(10).mean()
-            vol_ratio = s["volume"] * 1000 / avg_vol if avg_vol > 0 else 0
-            s["ma20"] = round(float(ma20), 1)
-            s["vol_ratio"] = round(vol_ratio, 1)
-            qualified.append(s)
+            enriched.append(s)
         except Exception:
             continue
 
-    # 加權排序：漲幅 60% + 量 40%
-    if qualified:
-        max_chg = max(s["chg_pct"] for s in qualified)
-        max_vol = max(s["volume"] for s in qualified) or 1
-        for s in qualified:
-            s["score"] = (s["chg_pct"] / max_chg * 0.6) + (s["volume"] / max_vol * 0.4)
-        qualified.sort(key=lambda x: x["score"], reverse=True)
+    # ── 第一層：15 檔（較鬆）──
+    # 站上MA20、漲幅>2%、量比>1.2x、非漲停
+    layer1 = [
+        s for s in enriched
+        if s["close"] > s["ma20"]
+        and s["chg_pct"] >= 2.0
+        and s["vol_ratio"] >= 1.2
+        and s["chg_pct"] < 9.5
+    ]
+    # 加權分數：漲幅50% + 量比30% + 連紅20%
+    max_chg = max((s["chg_pct"] for s in layer1), default=1)
+    max_vol = max((s["vol_ratio"] for s in layer1), default=1)
+    for s in layer1:
+        s["score"] = (
+            s["chg_pct"] / max_chg * 0.5 +
+            s["vol_ratio"] / max_vol * 0.3 +
+            s["green3"] / 3 * 0.2
+        )
+    layer1.sort(key=lambda x: x["score"], reverse=True)
+    top15 = layer1[:15]
 
-    top30 = qualified[:30]
+    # ── 第二層：TOP 5（嚴）──
+    # MA5>MA20、漲幅3-9%、量比>1.5x、近3日至少2日收紅
+    top5 = [
+        s for s in top15
+        if s["ma5"] and s["ma5"] > s["ma20"]
+        and 3.0 <= s["chg_pct"] < 9.5
+        and s["vol_ratio"] >= 1.5
+        and s["green3"] >= 2
+    ][:5]
 
-    # TOP 5：從 top30 中額外篩選量比 > 2x 且非漲停（避免隔日跳空開低）
-    top5 = [s for s in top30 if s.get("vol_ratio", 0) >= 2.0 and s["chg_pct"] < 9.5][:5]
-    # 若不足 5 檔，放寬條件補滿
+    # 不足 5 檔時放寬補滿
     if len(top5) < 5:
-        extras = [s for s in top30 if s not in top5]
+        extras = [s for s in top15 if s not in top5]
         top5 = (top5 + extras)[:5]
 
-    # 更新 watchlist.json
+    # 更新 watchlist.json（存 top15）
     watchlist_path = os.path.join(os.path.dirname(__file__), "watchlist.json")
     with open(watchlist_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-
     data["watchlist"] = [
         {"code": s["code"], "name": s["name"],
          "chg_pct": round(s["chg_pct"], 1),
          "added": date.today().isoformat()}
-        for s in top30
+        for s in top15
     ]
     data["last_scan"] = date.today().isoformat()
-
     with open(watchlist_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
     # 組推播訊息
-    lines = [f"【全市場強勢掃描】{date.today().strftime('%m/%d')}",
-             f"掃描 {len(stocks)} 檔 → 嚴選 {len(top30)} 檔\n"]
+    lines = [
+        f"【全市場強勢掃描】{date.today().strftime('%m/%d')}",
+        f"掃描 {len(stocks)} 檔 → 觀察清單 {len(top15)} 檔\n",
+    ]
+    for i, s in enumerate(top15, 1):
+        lines.append(
+            f"{i:2}. {s['name']}（{s['code']}）"
+            f"{s['close']:.0f} +{s['chg_pct']:.1f}%"
+            f" 量比{s['vol_ratio']:.1f}x"
+        )
 
-    for i, s in enumerate(top30, 1):
-        lines.append(f"{i:2}. {s['name']}（{s['code']}）{s['close']:.0f} +{s['chg_pct']:.1f}%")
-
-    # 明日 TOP 5
     lines.append(f"\n★ 明日重點關注 TOP 5 ★")
+    lines.append("（MA5>MA20、量比>1.5x、近3日2紅）\n")
     for i, s in enumerate(top5, 1):
-        vol_str = f" 量比{s['vol_ratio']:.1f}x" if s.get("vol_ratio") else ""
-        lines.append(f"  {i}. {s['name']}（{s['code']}）{s['close']:.0f} +{s['chg_pct']:.1f}%{vol_str}")
-    lines.append("\n量比>2x、非漲停、站上MA20，右側回測可留意")
+        lines.append(
+            f"  {i}. {s['name']}（{s['code']}）"
+            f"{s['close']:.0f} +{s['chg_pct']:.1f}%"
+            f" 量比{s['vol_ratio']:.1f}x"
+        )
+    lines.append("\n右側策略：等回測不破再進，停損前低。")
 
     return "\n".join(lines)
