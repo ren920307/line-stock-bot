@@ -2,7 +2,8 @@ import os, hashlib, hmac, base64
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 import requests
-from analyzer import analyze, fetch
+from analyzer import analyze
+from twse_fetcher import fetch
 from claude_analyzer import deep_analyze
 from stock_names import resolve
 import pandas as pd

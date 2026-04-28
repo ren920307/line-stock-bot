@@ -1,18 +1,6 @@
-import warnings; warnings.filterwarnings("ignore")
-import logging, io, contextlib
-logging.getLogger("yfinance").setLevel(logging.CRITICAL)
-import yfinance as yf
 import pandas as pd
 from datetime import date
-
-
-def fetch(code: str, days: int = 120) -> pd.DataFrame:
-    for suf in (".TWO", ".TW"):
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            h = yf.Ticker(code + suf).history(period=f"{days}d", auto_adjust=False)
-        if not h.empty:
-            return h[["Open", "High", "Low", "Close", "Volume"]]
-    return pd.DataFrame()
+from twse_fetcher import fetch
 
 
 def analyze(code: str, name: str = "") -> str:

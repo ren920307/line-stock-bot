@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-yfinance
+twstock
 pandas
 requests
 beautifulsoup4

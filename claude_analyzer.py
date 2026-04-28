@@ -1,6 +1,7 @@
 import os
 import requests
 from bs4 import BeautifulSoup
+from twse_fetcher import fetch as twse_fetch
 
 
 def fetch_news(code: str) -> str:
