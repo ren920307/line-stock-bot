@@ -6,7 +6,7 @@ from analyzer import analyze
 from twse_fetcher import fetch
 from claude_analyzer import deep_analyze
 from stock_names import resolve
-from commands import cmd_market, cmd_holdings, cmd_scan
+from commands import cmd_market, cmd_holdings, cmd_scan, cmd_daily_scan
 import pandas as pd
 
 LINE_TOKEN = os.environ["LINE_TOKEN"]
@@ -61,6 +61,14 @@ def build_price_summary(code: str) -> str:
 @app.get("/")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/daily-scan")
+def daily_scan():
+    """Render Cron Job 呼叫這個 endpoint 觸發每日掃描"""
+    result = cmd_daily_scan()
+    push(result)
+    return {"status": "ok", "message": result[:100]}
 
 
 @app.post("/webhook")
