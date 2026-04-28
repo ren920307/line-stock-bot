@@ -1,42 +1,44 @@
-NAME_TO_CODE = {
-    "台積電": "2330", "聯發科": "2454", "鴻海": "2317", "台達電": "2308",
-    "廣達": "2382", "緯創": "3231", "和碩": "4938", "仁寶": "2324",
-    "華碩": "2357", "宏碁": "2353", "微星": "2377", "技嘉": "2376",
-    "聯電": "2303", "南亞科": "2408", "華邦電": "2344", "旺宏": "2337",
-    "威剛": "3260", "群聯": "8299", "創見": "2451",
-    "大立光": "3008", "玉晶雲": "3406", "晶技": "3042",
-    "中華電": "2412", "台灣大": "3045", "遠傳": "4904",
-    "統一": "1216", "台塑": "1301", "南亞": "1303", "台化": "1326",
-    "中鋼": "2002", "中纖": "1409",
-    "富邦金": "2881", "國泰金": "2882", "玉山金": "2884", "兆豐金": "2886",
-    "元大金": "2885", "第一金": "2892", "永豐金": "2890",
-    "長榮": "2603", "陽明": "2609", "萬海": "2615",
-    "台泥": "1101", "亞泥": "1102",
-    "緯穎": "6669", "英業達": "2356", "雲達": "3432",
-    "矽力": "6415", "譜瑞": "4966", "瑞昱": "2379",
-    "世芯": "3661", "智原": "3035", "奕力": "3598",
-    "欣興": "3037", "耀華": "2460", "台光電": "2383",
-    # ABF載板
-    "景碩": "3189", "臻鼎": "4958", "臻鼎-KY": "4958",
-    # 光通訊
-    "光聖": "6442", "波若威": "3163", "上詮": "3363", "華星光": "4979",
-    "全新": "2455", "眾達": "4977", "眾達-KY": "4977", "聯亞": "3081",
-    # 廠務
-    "漢唐": "2404", "聖暉": "5536", "亞翔": "6139", "帆宣": "6196",
-    # 持股清單
-    "臺慶科": "3357", "國巨": "2327", "光洋科": "1785",
-    "京元電子": "2449", "楠梓電": "2316",
-    # 千金股
-    "穎崴": "6515", "旺矽": "6223",
-    # 其他常見
-    "南電": "8046", "信驊": "5274", "祥碩": "5269",
-    "力旺": "3529", "譜瑞-KY": "4966", "金像電": "2368",
-    "日月光": "3711", "京鼎": "3413", "辛耘": "3583",
-    "漢微科": "3658", "帆宣系統": "6196",
-}
+import requests
 
-def resolve(text):
+_cache = {}  # {name: code}
+
+
+def _build_cache():
+    global _cache
+    mapping = {}
+    # 上市
+    try:
+        r = requests.get(
+            "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=10
+        )
+        for d in r.json():
+            name = d.get("Name", "").strip()
+            code = d.get("Code", "").strip()
+            if name and code:
+                mapping[name] = code
+    except Exception:
+        pass
+    # 上櫃
+    try:
+        r = requests.get(
+            "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=10
+        )
+        for d in r.json():
+            name = d.get("CompanyName", "").strip()
+            code = d.get("SecuritiesCompanyCode", "").strip()
+            if name and code:
+                mapping[name] = code
+    except Exception:
+        pass
+    _cache = mapping
+
+
+def resolve(text: str):
     text = text.strip()
     if text.isdigit():
         return text
-    return NAME_TO_CODE.get(text)
+    if not _cache:
+        _build_cache()
+    return _cache.get(text)
