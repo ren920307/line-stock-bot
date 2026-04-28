@@ -96,7 +96,7 @@ def run_daily_scan() -> str:
     # 先按漲幅排序取前 80 候選（保留緩衝給 MA20 篩選）
     candidates = sorted(stocks, key=lambda x: x["chg_pct"], reverse=True)[:80]
 
-    # 用 Fugle 補抓 MA20（最多 60 次，取前 60 候選）
+    # 用 Fugle 補抓 MA20 與均量（最多 60 次，取前 60 候選）
     qualified = []
     for s in candidates[:60]:
         try:
@@ -108,10 +108,12 @@ def run_daily_scan() -> str:
             ma20 = last["MA20"]
             if pd.isna(ma20):
                 continue
-            above_ma20 = s["close"] > ma20
-            if not above_ma20:
+            if s["close"] <= ma20:
                 continue
+            avg_vol = df["Volume"].tail(10).mean()
+            vol_ratio = s["volume"] * 1000 / avg_vol if avg_vol > 0 else 0
             s["ma20"] = round(float(ma20), 1)
+            s["vol_ratio"] = round(vol_ratio, 1)
             qualified.append(s)
         except Exception:
             continue
@@ -125,6 +127,13 @@ def run_daily_scan() -> str:
         qualified.sort(key=lambda x: x["score"], reverse=True)
 
     top30 = qualified[:30]
+
+    # TOP 5：從 top30 中額外篩選量比 > 2x 且非漲停（避免隔日跳空開低）
+    top5 = [s for s in top30 if s.get("vol_ratio", 0) >= 2.0 and s["chg_pct"] < 9.5][:5]
+    # 若不足 5 檔，放寬條件補滿
+    if len(top5) < 5:
+        extras = [s for s in top30 if s not in top5]
+        top5 = (top5 + extras)[:5]
 
     # 更新 watchlist.json
     watchlist_path = os.path.join(os.path.dirname(__file__), "watchlist.json")
@@ -148,5 +157,12 @@ def run_daily_scan() -> str:
 
     for i, s in enumerate(top30, 1):
         lines.append(f"{i:2}. {s['name']}（{s['code']}）{s['close']:.0f} +{s['chg_pct']:.1f}%")
+
+    # 明日 TOP 5
+    lines.append(f"\n★ 明日重點關注 TOP 5 ★")
+    for i, s in enumerate(top5, 1):
+        vol_str = f" 量比{s['vol_ratio']:.1f}x" if s.get("vol_ratio") else ""
+        lines.append(f"  {i}. {s['name']}（{s['code']}）{s['close']:.0f} +{s['chg_pct']:.1f}%{vol_str}")
+    lines.append("\n量比>2x、非漲停、站上MA20，右側回測可留意")
 
     return "\n".join(lines)
