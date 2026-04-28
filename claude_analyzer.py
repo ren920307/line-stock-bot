@@ -68,37 +68,32 @@ def deep_analyze(code: str, name: str, price_summary: str) -> str:
 近期新聞：
 {news}
 
-=== 輸出格式 ===
+=== 輸出格式（嚴格遵守）===
+
+每個區塊最多 3 行，不廢話，直接給數字和結論。
 
 【消息面】
-整理新聞 2～3 個重點，直接說影響方向，不超過 5 行。
+列 2～3 點，每點一行，格式：「事件 → 影響」
 
-【市場結構 SMC】
-說明現在是哪個階段（積累/推進/派發/下跌）。
-給出具體價位：
-- Order Block 區間（機構成本帶，回測有撐）：XXX～XXX
-- FVG 缺口（跳空未填區間）：XXX～XXX（若無則說明）
-- Buy-Side Liquidity（上方掃單目標）：XXX
+【SMC結構】
+階段：XXX（積累/推進/派發/下跌）
+OB（機構成本帶，回測有撐）：XXX～XXX
+FVG（跳空未填，可能回補）：XXX～XXX　BSL（掃單目標）：XXX
 
 【技術面】
-均線排列、價格位置、量能，3～4 行。
+均線：XXX排列　價格位置：XXX　量能：XXX
+一句話判斷走勢特徵
 
 【三個進場劇本】
-劇本一 追價（現價或開盤追）
-進場：XXX　停損：XXX　目標：XXX　R:R X:1
+① 追價｜進場 XXX　停損 XXX　目標 XXX　R:R X:1
+② 回測｜進場條件 OB/FVG XXX～XXX 撐穩　停損 XXX　目標 XXX　R:R X:1
+③ 突破｜突破 XXX 量比>X倍　停損 XXX　目標 XXX　R:R X:1
 
-劇本二 SMC 回測安全位
-進場條件：回測 OB/FVG XXX～XXX 撐穩
-停損：XXX　目標：XXX　R:R X:1
+【風險】
+① XXX
+② XXX
 
-劇本三 突破確認
-進場條件：突破 XXX 且量比 > X 倍收盤確認
-停損：XXX　目標：XXX　R:R X:1
-
-【風險提示】
-2 點，直接說。
-
-最後一行：整體傾向（偏多操作 / 觀望 / 偏空迴避）"""
+整體傾向：偏多操作 / 觀望 / 偏空迴避"""
 
     resp = requests.post(
         "https://api.anthropic.com/v1/messages",
