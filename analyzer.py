@@ -1,6 +1,16 @@
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 from twse_fetcher import fetch
+from fugle_fetcher import fetch_quote
+
+
+def _is_trading_hours() -> bool:
+    """判斷是否在盤中（週一至週五 9:00～13:30）"""
+    now = datetime.now()
+    if now.weekday() >= 5:
+        return False
+    t = now.hour * 60 + now.minute
+    return 9 * 60 <= t <= 13 * 60 + 30
 
 
 def analyze(code: str, name: str = "") -> str:
@@ -16,11 +26,27 @@ def analyze(code: str, name: str = "") -> str:
     prev  = df.iloc[-2]
     prev2 = df.iloc[-3] if len(df) >= 3 else prev
 
-    close  = last["Close"]
-    open_  = last["Open"]
-    high   = last["High"]
-    low    = last["Low"]
-    vol    = int(last["Volume"])
+    # 盤中優先使用 Fugle 即時報價
+    if _is_trading_hours():
+        q = fetch_quote(code)
+        if q and q.get("close"):
+            close = float(q["close"])
+            high  = float(q["high"]) if q.get("high") else float(last["High"])
+            low   = float(q["low"])  if q.get("low")  else float(last["Low"])
+            vol   = int(q["volume"]) if q.get("volume") else int(last["Volume"])
+            open_ = float(last["Open"])  # 開盤價用歷史
+        else:
+            close  = float(last["Close"])
+            open_  = float(last["Open"])
+            high   = float(last["High"])
+            low    = float(last["Low"])
+            vol    = int(last["Volume"])
+    else:
+        close  = float(last["Close"])
+        open_  = float(last["Open"])
+        high   = float(last["High"])
+        low    = float(last["Low"])
+        vol    = int(last["Volume"])
     ma5    = last["MA5"]
     ma20   = last["MA20"]
     ma60   = last["MA60"]
