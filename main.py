@@ -171,11 +171,9 @@ async def webhook(request: Request):
         is_group    = source_type in ("group", "room")
 
         def send(text: str):
-            """回覆到來源（群組或個人）"""
-            if reply_token:
-                reply(reply_token, text)
-            else:
-                push(text, group_id if is_group else MY_USER_ID)
+            """推播到來源（群組或個人）"""
+            target = group_id if is_group else MY_USER_ID
+            push(text, target)
 
         def send_me(text: str):
             """只推給你"""
