@@ -66,10 +66,23 @@ def health():
 
 @app.get("/daily-scan")
 def daily_scan():
-    """Render Cron Job 每日 14:35 呼叫，掃全市場嚴選 30 檔推播"""
+    """每日 14:35 掃全市場，更新 watchlist.json，不推播（由本機統一推播）"""
     result = run_daily_scan()
-    push(result)
-    return {"status": "ok", "message": result[:100]}
+    return {"status": "ok", "report": result}
+
+
+@app.get("/scan-result")
+def scan_result():
+    """本機拉取最新掃描結果"""
+    import json
+    try:
+        with open("watchlist.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        watchlist = data.get("watchlist", [])
+        last_scan = data.get("last_scan", "")
+        return {"status": "ok", "last_scan": last_scan, "watchlist": watchlist}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.post("/webhook")
