@@ -211,7 +211,6 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
                 send(f"找不到「{query}」，請用代號或股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            reply(reply_token, "尊者感應中.....")
             background_tasks.add_task(_do_deep_analysis, code, name, group_id if is_group else MY_USER_ID)
             continue
 
@@ -272,7 +271,6 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
                 send(f"找不到「{query}」，請用代號（如 #2330）或常見股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            reply(reply_token, "分析中，請稍候...")
             background_tasks.add_task(_do_analysis, code, name, group_id if is_group else MY_USER_ID)
             continue
 
