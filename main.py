@@ -194,7 +194,7 @@ async def webhook(request: Request):
                 send(f"找不到「{query}」，請用代號或股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            send("資料抓取中，約需 15 秒...")
+            send("尊者感應中.....")
             summary = build_price_summary(code)
             if "無法取得" in summary:
                 send(f"抱歉，{query} 的 K 線資料抓取失敗，請稍後再試或改用代號查詢。")
