@@ -170,9 +170,6 @@ async def webhook(request: Request):
         is_me       = sender_id == MY_USER_ID
         is_group    = source_type in ("group", "room")
 
-        # Debug：收到群組訊息時推播給你確認
-        if is_group and text.startswith("#"):
-            push(f"[DEBUG] 群組訊息收到\nsource_type:{source_type}\ngroup_id:{group_id}\nsender:{sender_id}\ntext:{text}", MY_USER_ID)
 
         def send(text: str):
             """推播到來源（群組或個人）"""
