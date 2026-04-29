@@ -145,21 +145,21 @@ def scan_result():
         return {"status": "error", "message": str(e)}
 
 
-def _do_analysis(code: str, name: str, target: str):
-    """背景跑分析，push 結果"""
+def _do_analysis(code: str, name: str, reply_token: str):
+    """背景跑分析，reply 回覆（免費）"""
     result = analyze(code, name)
-    push(result, target)
+    reply(reply_token, result)
 
-def _do_deep_analysis(code: str, name: str, target: str):
-    """背景跑深度分析，push 結果"""
+def _do_deep_analysis(code: str, name: str, reply_token: str):
+    """背景跑深度分析，reply 回覆（免費）"""
     summary = build_price_summary(code)
     if "無法取得" in summary:
-        push(f"抱歉，{name or code} 的 K 線資料抓取失敗。", target)
+        reply(reply_token, f"抱歉，{name or code} 的 K 線資料抓取失敗。")
         return
     result = deep_analyze(code, name, summary)
     label = f"{name}（{code}）" if name else code
     today_block = summary.split("\n近10日")[0]
-    push(f"【{label} 深度分析】\n\n{today_block}\n\n{result}", target)
+    reply(reply_token, f"【{label} 深度分析】\n\n{today_block}\n\n{result}")
 
 
 @app.post("/webhook")
@@ -211,7 +211,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
                 send(f"找不到「{query}」，請用代號或股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            background_tasks.add_task(_do_deep_analysis, code, name, group_id if is_group else MY_USER_ID)
+            background_tasks.add_task(_do_deep_analysis, code, name, reply_token)
             continue
 
         # 固定指令
@@ -271,7 +271,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
                 send(f"找不到「{query}」，請用代號（如 #2330）或常見股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            background_tasks.add_task(_do_analysis, code, name, group_id if is_group else MY_USER_ID)
+            background_tasks.add_task(_do_analysis, code, name, reply_token)
             continue
 
     return JSONResponse({"status": "ok"})
