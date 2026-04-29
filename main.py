@@ -1,5 +1,5 @@
 import os, hashlib, hmac, base64, json
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 import requests
 from analyzer import analyze
@@ -145,8 +145,25 @@ def scan_result():
         return {"status": "error", "message": str(e)}
 
 
+def _do_analysis(code: str, name: str, target: str):
+    """背景跑分析，push 結果"""
+    result = analyze(code, name)
+    push(result, target)
+
+def _do_deep_analysis(code: str, name: str, target: str):
+    """背景跑深度分析，push 結果"""
+    summary = build_price_summary(code)
+    if "無法取得" in summary:
+        push(f"抱歉，{name or code} 的 K 線資料抓取失敗。", target)
+        return
+    result = deep_analyze(code, name, summary)
+    label = f"{name}（{code}）" if name else code
+    today_block = summary.split("\n近10日")[0]
+    push(f"【{label} 深度分析】\n\n{today_block}\n\n{result}", target)
+
+
 @app.post("/webhook")
-async def webhook(request: Request):
+async def webhook(request: Request, background_tasks: BackgroundTasks):
     body = await request.body()
     sig = request.headers.get("X-Line-Signature", "")
 
@@ -194,15 +211,8 @@ async def webhook(request: Request):
                 send(f"找不到「{query}」，請用代號或股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            send("尊者感應中.....")
-            summary = build_price_summary(code)
-            if "無法取得" in summary:
-                send(f"抱歉，{query} 的 K 線資料抓取失敗，請稍後再試或改用代號查詢。")
-                continue
-            result = deep_analyze(code, name, summary)
-            label = f"{name}（{code}）" if name else code
-            today_block = summary.split("\n近10日")[0]
-            send(f"【{label} 深度分析】\n\n{today_block}\n\n{result}")
+            reply(reply_token, "尊者感應中.....")
+            background_tasks.add_task(_do_deep_analysis, code, name, group_id if is_group else MY_USER_ID)
             continue
 
         # 固定指令
@@ -262,9 +272,8 @@ async def webhook(request: Request):
                 send(f"找不到「{query}」，請用代號（如 #2330）或常見股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            send("分析中，請稍候...")
-            result = analyze(code, name)
-            send(result)
+            reply(reply_token, "分析中，請稍候...")
+            background_tasks.add_task(_do_analysis, code, name, group_id if is_group else MY_USER_ID)
             continue
 
     return JSONResponse({"status": "ok"})

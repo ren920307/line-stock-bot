@@ -1,0 +1,28 @@
+[2026-04-29 14:46:25.485645 +08:00 INFO] [login] personal_id="A129113685"
+[2026-04-29 14:46:25.519126 +08:00 INFO] this account require 2fa
+[2026-04-29 14:46:25.568755 +08:00 INFO] [future_option_mapping]: 35.990125ms
+[2026-04-29 14:46:25.583841 +08:00 INFO] [future_option_mapping]: 13.69475ms
+[2026-04-29 14:46:25.663957 +08:00 INFO] [future_option_mapping]: 79.862167ms
+[2026-04-29 14:46:25.690770 +08:00 INFO] [future_option_mapping]: 15.501916ms
+[2026-04-29 14:46:25.692797 +08:00 INFO] [unrealized gains and loses] account=Account { branch_no: "20004", account: "3195254", account_type: "stock", name: "陳詠仁" }
+[2026-04-29 14:46:25.844423 +08:00 INFO] [inventory_stock_detail_result]: 151.595125ms
+[2026-04-29 14:46:25.864455 +08:00 INFO] [query_symbol_quote]: 18.548333ms
+[2026-04-29 14:46:25.874954 +08:00 INFO] [query_symbol_quote]: 10.218292ms
+[2026-04-29 14:46:25.887016 +08:00 INFO] [query_symbol_quote]: 11.839583ms
+[2026-04-29 14:46:25.899077 +08:00 INFO] [query_symbol_quote]: 11.980875ms
+[2026-04-29 14:46:25.910983 +08:00 INFO] [query_symbol_quote]: 11.858208ms
+[2026-04-29 14:46:25.923332 +08:00 INFO] [query_symbol_quote]: 12.233834ms
+[2026-04-29 14:46:25.935373 +08:00 INFO] [query_symbol_quote]: 11.968417ms
+[2026-04-29 14:46:25.947017 +08:00 INFO] [query_symbol_quote]: 11.587625ms
+[2026-04-29 14:46:25.958607 +08:00 INFO] [query_symbol_quote]: 11.492834ms
+[2026-04-29 14:46:25.970401 +08:00 INFO] [query_symbol_quote]: 11.713042ms
+[2026-04-29 14:46:25.981296 +08:00 INFO] [query_symbol_quote]: 10.827458ms
+[2026-04-29 14:46:25.989798 +08:00 INFO] [query_symbol_quote]: 8.45225ms
+[2026-04-29 14:46:25.999126 +08:00 INFO] [query_symbol_quote]: 9.269166ms
+[2026-04-29 14:46:26.010815 +08:00 INFO] [query_symbol_quote]: 11.598709ms
+[2026-04-29 14:46:26.022814 +08:00 INFO] [query_symbol_quote]: 11.935916ms
+[2026-04-29 14:46:26.035788 +08:00 INFO] [query_symbol_quote]: 12.908625ms
+[2026-04-29 14:46:26.047455 +08:00 INFO] [query_symbol_quote]: 11.563167ms
+[2026-04-29 14:46:26.059588 +08:00 INFO] [query_symbol_quote]: 12.054833ms
+[2026-04-29 14:46:26.071623 +08:00 INFO] [query_symbol_quote]: 11.946084ms
+[2026-04-29 14:46:26.086718 +08:00 INFO] [query_symbol_quote]: 15.02325ms
