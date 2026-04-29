@@ -1,4 +1,4 @@
-import os, hashlib, hmac, base64
+import os, hashlib, hmac, base64, json
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 import requests
@@ -10,22 +10,61 @@ from commands import cmd_market, cmd_holdings, cmd_scan
 from market_scanner import run_daily_scan
 import pandas as pd
 
-LINE_TOKEN = os.environ["LINE_TOKEN"]
-LINE_SECRET = os.environ.get("LINE_SECRET", "")
+LINE_TOKEN   = os.environ["LINE_TOKEN"]
+LINE_SECRET  = os.environ.get("LINE_SECRET", "")
+MY_USER_ID   = os.environ["LINE_USER_ID"]
+GROUP_ID_FILE = "group_ids.json"
 
 app = FastAPI()
 
 
-def push(text: str):
-    user_id = os.environ["LINE_USER_ID"]
+# ── 群組 ID 管理 ──────────────────────────────────────
+def _load_groups() -> list:
+    try:
+        with open(GROUP_ID_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def _save_groups(ids: list):
+    with open(GROUP_ID_FILE, "w") as f:
+        json.dump(ids, f)
+
+def _register_group(gid: str):
+    ids = _load_groups()
+    if gid not in ids:
+        ids.append(gid)
+        _save_groups(ids)
+
+
+# ── 推播函式 ─────────────────────────────────────────
+def push(text: str, target_id: str = None):
+    """推播給指定 ID（預設推給你）"""
+    tid = target_id or MY_USER_ID
     requests.post(
         "https://api.line.me/v2/bot/message/push",
         headers={"Authorization": f"Bearer {LINE_TOKEN}", "Content-Type": "application/json"},
-        json={"to": user_id, "messages": [{"type": "text", "text": text}]},
+        json={"to": tid, "messages": [{"type": "text", "text": text}]},
         timeout=10,
     )
 
+def reply(token: str, text: str):
+    """回覆給發訊息的來源（個人或群組）"""
+    requests.post(
+        "https://api.line.me/v2/bot/message/reply",
+        headers={"Authorization": f"Bearer {LINE_TOKEN}", "Content-Type": "application/json"},
+        json={"replyToken": token, "messages": [{"type": "text", "text": text}]},
+        timeout=10,
+    )
 
+def push_all_groups(text: str):
+    """推播給你 + 所有已登記群組"""
+    push(text, MY_USER_ID)
+    for gid in _load_groups():
+        push(text, gid)
+
+
+# ── 工具函式 ─────────────────────────────────────────
 def verify_signature(body: bytes, sig: str) -> bool:
     if not LINE_SECRET:
         return True
@@ -59,6 +98,29 @@ def build_price_summary(code: str) -> str:
     )
 
 
+def scan_top15_msg() -> str:
+    """給群組看的掃描結果（只有 TOP15+TOP5，不含損益）"""
+    try:
+        with open("watchlist.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        watchlist = data.get("watchlist", [])
+        last_scan = data.get("last_scan", "")
+        if not watchlist:
+            return "尚無掃描資料，請稍後再試。"
+        from datetime import date
+        scan_date = last_scan or date.today().isoformat()
+        lines = [f"【全市場強勢掃描】{scan_date}",
+                 f"篩選條件：站上MA20 / 漲>2% / 量比>1.2x", ""]
+        for i, s in enumerate(watchlist[:15], 1):
+            chg = f"+{s['chg_pct']:.1f}%" if s.get("chg_pct") else ""
+            lines.append(f"{i:2}. {s['name']}（{s['code']}）{chg}")
+        lines.append("\n右側策略：等回測不破再進，停損前低。")
+        return "\n".join(lines)
+    except Exception:
+        return "掃描資料讀取失敗。"
+
+
+# ── 路由 ─────────────────────────────────────────────
 @app.get("/")
 def health():
     return {"status": "ok"}
@@ -66,21 +128,19 @@ def health():
 
 @app.get("/daily-scan")
 def daily_scan():
-    """每日 14:35 掃全市場，更新 watchlist.json，不推播（由本機統一推播）"""
+    """每日掃全市場，更新 watchlist.json，推播 TOP15+TOP5 到你和所有群組"""
     result = run_daily_scan()
-    return {"status": "ok", "report": result}
+    push_all_groups(result)
+    return {"status": "ok", "message": result[:100]}
 
 
 @app.get("/scan-result")
 def scan_result():
-    """本機拉取最新掃描結果"""
-    import json
     try:
         with open("watchlist.json", "r", encoding="utf-8") as f:
             data = json.load(f)
-        watchlist = data.get("watchlist", [])
-        last_scan = data.get("last_scan", "")
-        return {"status": "ok", "last_scan": last_scan, "watchlist": watchlist}
+        return {"status": "ok", "last_scan": data.get("last_scan", ""),
+                "watchlist": data.get("watchlist", [])}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -100,79 +160,99 @@ async def webhook(request: Request):
         msg = event.get("message", {})
         if msg.get("type") != "text":
             continue
-        text = msg.get("text", "").strip()
 
-        # ## 深度分析（Claude AI）
+        text        = msg.get("text", "").strip()
+        reply_token = event.get("replyToken", "")
+        source      = event.get("source", {})
+        source_type = source.get("type", "user")          # user / group / room
+        sender_id   = source.get("userId", "")
+        group_id    = source.get("groupId", "") or source.get("roomId", "")
+        is_me       = sender_id == MY_USER_ID
+        is_group    = source_type in ("group", "room")
+
+        def send(text: str):
+            """回覆到來源（群組或個人）"""
+            if reply_token:
+                reply(reply_token, text)
+            else:
+                push(text, group_id if is_group else MY_USER_ID)
+
+        def send_me(text: str):
+            """只推給你"""
+            push(text, MY_USER_ID)
+
+        # 群組登記指令（只有你能用）
+        if text == "#設定群組" and is_group and is_me:
+            _register_group(group_id)
+            send(f"群組已登記！\nID：{group_id}\n之後每日掃描結果會自動推播到這裡。")
+            continue
+
+        # ## 深度分析
         if text.startswith("##"):
             query = text[2:].strip()
             code = resolve(query)
             if not code:
-                push(f"找不到「{query}」，請用代號或股票名稱。")
+                send(f"找不到「{query}」，請用代號或股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            push("資料抓取中，約需 15 秒...")
+            send("資料抓取中，約需 15 秒...")
             summary = build_price_summary(code)
             if "無法取得" in summary:
-                push(f"抱歉，{query} 的 K 線資料抓取失敗，請稍後再試或改用代號查詢。")
+                send(f"抱歉，{query} 的 K 線資料抓取失敗，請稍後再試或改用代號查詢。")
                 continue
             result = deep_analyze(code, name, summary)
             label = f"{name}（{code}）" if name else code
-            # 取 summary 中的今日數據區塊（第一段，不含近10日K線）
             today_block = summary.split("\n近10日")[0]
-            push(f"【{label} 深度分析】\n\n{today_block}\n\n{result}")
+            send(f"【{label} 深度分析】\n\n{today_block}\n\n{result}")
             continue
 
-        # # 固定指令
+        # 固定指令
         if text == "#規則":
-            push(
+            send(
                 "【指令說明】\n"
                 "\n"
                 "#股票名稱或代號\n"
-                "技術分析（右側+SMC）\n"
-                "免費，約5秒\n"
+                "技術分析（右側+SMC），免費\n"
                 "例：#威剛　#2330\n"
                 "\n"
                 "##股票名稱或代號\n"
                 "Claude AI深度分析＋爬新聞\n"
                 "含三個進場劇本與R:R\n"
-                "例：##啟碁　##6285\n"
                 "\n"
-                "#大盤\n"
-                "加權指數今日表現\n"
-                "\n"
-                "#持股\n"
-                "未平倉持股即時報價\n"
-                "\n"
-                "#掃描\n"
-                "觀察清單強勢篩選\n"
-                "\n"
-                "支援全台股名稱查詢\n"
-                "打不到就直接用代號"
+                "#大盤　加權指數今日表現\n"
+                "#掃描　今日強勢股TOP15+5\n"
+                "#規則　顯示此說明"
             )
             continue
+
         if text == "#大盤":
-            push(cmd_market())
-            continue
-        if text == "#持股":
-            push("查詢持股中...")
-            push(cmd_holdings())
-            continue
-        if text == "#掃描":
-            push("掃描觀察清單中，請稍候...")
-            push(cmd_scan())
+            send(cmd_market())
             continue
 
-        # # 標準分析
+        if text == "#掃描":
+            send("掃描中，請稍候...")
+            send(scan_top15_msg())
+            continue
+
+        # 只限你的指令
+        if text == "#持股":
+            if not is_me:
+                continue  # 其他人打沒反應
+            send_me("查詢持股中...")
+            send_me(cmd_holdings())
+            continue
+
+        # 標準分析
         if text.startswith("#"):
             query = text[1:].strip()
             code = resolve(query)
             if not code:
-                push(f"找不到「{query}」，請用代號（如 #2330）或常見股票名稱。")
+                send(f"找不到「{query}」，請用代號（如 #2330）或常見股票名稱。")
                 continue
             name = query if not query.isdigit() else ""
-            push("分析中，請稍候...")
+            send("分析中，請稍候...")
             result = analyze(code, name)
-            push(result)
+            send(result)
             continue
 
     return JSONResponse({"status": "ok"})
