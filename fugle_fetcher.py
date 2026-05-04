@@ -54,7 +54,8 @@ def fetch_quote(code: str) -> dict:
         high  = d.get("highPrice")
         low   = d.get("lowPrice")
         open_ = d.get("openPrice")
-        vol   = d.get("total", {}).get("tradeVolume") if isinstance(d.get("total"), dict) else d.get("tradeVolume")
+        vol_raw = d.get("total", {}).get("tradeVolume") if isinstance(d.get("total"), dict) else d.get("tradeVolume")
+        vol     = int(vol_raw) * 1000 if vol_raw else None  # Fugle 單位是張，乘回股與 twstock 一致
         chg_pct = round((close - prev) / prev * 100, 2) if (close and prev) else None
         return {"close": close, "prev": prev, "high": high, "low": low, "open": open_, "volume": vol, "chg_pct": chg_pct}
     except Exception:
