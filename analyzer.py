@@ -50,7 +50,10 @@ def analyze(code: str, name: str = "") -> str:
 
     # 漲停判斷
     is_limit_up = chg_pct >= 9.5
-    chg_label = f"漲停 +{chg_pct:.1f}%" if is_limit_up else f"{chg:+.1f}（{chg_pct:+.1f}%）"
+    if is_limit_up:
+        chg_label = f"漲停 +{chg_pct:.1f}%\n關聖帝君已經給我九個聖杯"
+    else:
+        chg_label = f"{chg:+.1f}（{chg_pct:+.1f}%）"
 
     # 均線排列
     if ma5 > ma20 > ma60:
