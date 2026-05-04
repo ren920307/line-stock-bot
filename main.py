@@ -73,6 +73,7 @@ def verify_signature(body: bytes, sig: str) -> bool:
 
 
 def build_price_summary(code: str) -> str:
+    from fugle_fetcher import fetch_quote
     df = fetch(code)
     if df.empty:
         return "無法取得資料"
@@ -81,17 +82,34 @@ def build_price_summary(code: str) -> str:
     df["MA60"] = df["Close"].rolling(60).mean()
     last = df.iloc[-1]
     prev = df.iloc[-2]
-    chg_pct = (last["Close"] - prev["Close"]) / prev["Close"] * 100
     high60 = df["High"].tail(60).max()
     low60  = df["Low"].tail(60).min()
     recent = df.tail(10)[["Open","High","Low","Close","Volume"]].round(1).to_string()
-    is_limit = chg_pct >= 9.5
-    chg_label = f"漲停 +{chg_pct:.1f}%" if is_limit else f"{chg_pct:+.1f}%"
+
+    q = fetch_quote(code)
+    if q and q.get("close"):
+        close      = float(q["close"])
+        open_      = float(q.get("open") or last["Open"])
+        high       = float(q["high"]) if q.get("high") else float(last["High"])
+        low        = float(q["low"])  if q.get("low")  else float(last["Low"])
+        vol        = int(q["volume"]) if q.get("volume") else int(last["Volume"])
+        prev_close = float(q["prev"]) if q.get("prev") else float(prev["Close"])
+    else:
+        close      = float(last["Close"])
+        open_      = float(last["Open"])
+        high       = float(last["High"])
+        low        = float(last["Low"])
+        vol        = int(last["Volume"])
+        prev_close = float(prev["Close"])
+
+    chg_pct   = (close - prev_close) / prev_close * 100
+    is_limit  = chg_pct >= 9.5
+    chg_label = f"漲停 +{chg_pct:.1f}%\n關聖帝君已經給我九個聖杯" if is_limit else f"{chg_pct:+.1f}%"
     return (
         f"【今日數據】\n"
-        f"收：{last['Close']:.0f}（{chg_label}）\n"
-        f"開：{last['Open']:.1f}　高：{last['High']:.1f}　低：{last['Low']:.1f}\n"
-        f"量：{int(last['Volume'])//1000:,}張\n"
+        f"收：{close:.0f}（{chg_label}）\n"
+        f"開：{open_:.1f}　高：{high:.1f}　低：{low:.1f}\n"
+        f"量：{vol//1000:,}張\n"
         f"MA5：{last['MA5']:.1f}　MA20：{last['MA20']:.1f}　MA60：{last['MA60']:.1f}\n"
         f"60日高：{high60:.0f}　低：{low60:.0f}\n"
         f"\n近10日K線：\n{recent}"
