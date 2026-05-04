@@ -5,7 +5,7 @@ import requests
 from analyzer import analyze
 from twse_fetcher import fetch
 from claude_analyzer import deep_analyze
-from stock_names import resolve
+from stock_names import resolve, get_name
 from commands import cmd_market, cmd_holdings, cmd_scan
 from market_scanner import run_daily_scan
 import pandas as pd
@@ -210,7 +210,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
             if not code:
                 send(f"找不到「{query}」，請用代號或股票名稱。")
                 continue
-            name = query if not query.isdigit() else ""
+            name = query if not query.isdigit() else get_name(code)
             background_tasks.add_task(_do_deep_analysis, code, name, reply_token)
             continue
 
@@ -270,7 +270,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
             if not code:
                 send(f"找不到「{query}」，請用代號（如 #2330）或常見股票名稱。")
                 continue
-            name = query if not query.isdigit() else ""
+            name = query if not query.isdigit() else get_name(code)
             background_tasks.add_task(_do_analysis, code, name, reply_token)
             continue
 

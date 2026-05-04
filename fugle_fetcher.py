@@ -49,7 +49,7 @@ def fetch_quote(code: str) -> dict:
     try:
         r = requests.get(url, headers=HEADERS, timeout=8)
         d = r.json()
-        close = d.get("closePrice") or d.get("lastPrice") or d.get("previousClose")
+        close = d.get("lastPrice") or d.get("closePrice") or d.get("previousClose")
         prev  = d.get("previousClose") or d.get("referencePrice")
         high  = d.get("highPrice")
         low   = d.get("lowPrice")
