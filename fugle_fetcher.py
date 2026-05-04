@@ -53,9 +53,10 @@ def fetch_quote(code: str) -> dict:
         prev  = d.get("previousClose") or d.get("referencePrice")
         high  = d.get("highPrice")
         low   = d.get("lowPrice")
+        open_ = d.get("openPrice")
         vol   = d.get("total", {}).get("tradeVolume") if isinstance(d.get("total"), dict) else d.get("tradeVolume")
         chg_pct = round((close - prev) / prev * 100, 2) if (close and prev) else None
-        return {"close": close, "prev": prev, "high": high, "low": low, "volume": vol, "chg_pct": chg_pct}
+        return {"close": close, "prev": prev, "high": high, "low": low, "open": open_, "volume": vol, "chg_pct": chg_pct}
     except Exception:
         return {}
 
