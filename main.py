@@ -178,7 +178,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         if msg.get("type") != "text":
             continue
 
-        text        = msg.get("text", "").strip()
+        text        = msg.get("text", "").strip().replace("＃", "#")
         reply_token = event.get("replyToken", "")
         source      = event.get("source", {})
         source_type = source.get("type", "user")          # user / group / room
