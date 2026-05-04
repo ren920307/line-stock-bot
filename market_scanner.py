@@ -172,8 +172,7 @@ def run_daily_scan() -> str:
 
     # 組推播訊息
     lines = [
-        f"【全市場強勢掃描】{date.today().strftime('%m/%d')}",
-        f"掃描 {len(stocks)} 檔 → 觀察清單 {len(top15)} 檔",
+        f"尊者開示：我從股海 {len(stocks)} 檔中找到不錯的標的，",
         f"",
         f"篩選條件：站上MA20 / 漲幅>2% / 量比>1.2x",
     ]

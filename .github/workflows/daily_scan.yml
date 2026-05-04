@@ -2,7 +2,7 @@ name: Daily Scan
 
 on:
   schedule:
-    - cron: "45 6 * * 1-5"  # 台灣時間 14:45，週一到週五
+    - cron: "0 7 * * 1-5"  # 台灣時間 15:00，週一到週五
   workflow_dispatch:          # 手動觸發
 
 jobs:
