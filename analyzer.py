@@ -21,22 +21,24 @@ def analyze(code: str, name: str = "") -> str:
     # 永遠先嘗試 Fugle（盤中或收盤後當日都有資料），失敗才退回 twstock 歷史
     q = fetch_quote(code)
     if q and q.get("close"):
-        close = float(q["close"])
-        high  = float(q["high"]) if q.get("high") else float(last["High"])
-        low   = float(q["low"])  if q.get("low")  else float(last["Low"])
-        vol   = int(q["volume"]) if q.get("volume") else int(last["Volume"])
-        open_ = float(q.get("open") or last["Open"])
+        close   = float(q["close"])
+        high    = float(q["high"]) if q.get("high") else float(last["High"])
+        low     = float(q["low"])  if q.get("low")  else float(last["Low"])
+        vol     = int(q["volume"]) if q.get("volume") else int(last["Volume"])
+        open_   = float(q.get("open") or last["Open"])
+        prev_close = float(q["prev"]) if q.get("prev") else float(prev["Close"])
     else:
-        close  = float(last["Close"])
-        open_  = float(last["Open"])
-        high   = float(last["High"])
-        low    = float(last["Low"])
-        vol    = int(last["Volume"])
+        close     = float(last["Close"])
+        open_     = float(last["Open"])
+        high      = float(last["High"])
+        low       = float(last["Low"])
+        vol       = int(last["Volume"])
+        prev_close = float(prev["Close"])
     ma5    = last["MA5"]
     ma20   = last["MA20"]
     ma60   = last["MA60"]
-    chg    = close - prev["Close"]
-    chg_pct = chg / prev["Close"] * 100
+    chg     = close - prev_close
+    chg_pct = chg / prev_close * 100
 
     high60 = df["High"].tail(60).max()
     low60  = df["Low"].tail(60).min()
@@ -85,12 +87,12 @@ def analyze(code: str, name: str = "") -> str:
     ob_end   = round(float(min_price) * 1.10, 0)
 
     # FVG：今日跳空缺口
-    fvg_low  = round(float(prev["Close"]), 1)
+    fvg_low  = round(prev_close, 1)
     fvg_high = round(float(open_), 1)
     has_fvg  = fvg_high > fvg_low * 1.005
 
     # 支撐阻力
-    support1 = round(float(prev["Close"]), 1)  # 昨收
+    support1 = round(prev_close, 1)  # 昨收
     support2 = round(float(ob_end), 1)          # OB頂
     resist1  = round(float(high60), 1)           # 前高
 
