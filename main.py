@@ -9,6 +9,8 @@ from claude_analyzer import deep_analyze
 from stock_names import resolve, get_name
 from commands import cmd_market, cmd_holdings, cmd_scan
 from market_scanner import run_daily_scan
+from universe_builder import build_universe
+from weekly_report import build_weekly_report
 import pandas as pd
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -19,15 +21,36 @@ LINE_SECRET  = os.environ.get("LINE_SECRET", "")
 MY_USER_ID   = os.environ["LINE_USER_ID"]
 GROUP_ID_FILE = "group_ids.json"
 
-def _run_daily_scan_job():
-    result = run_daily_scan()
-    push(MY_USER_ID, result)
+def _job_update_universe():
+    try:
+        build_universe()
+    except Exception as e:
+        print(f"[universe] 更新失敗：{e}")
+
+def _job_daily_scan():
+    try:
+        result = run_daily_scan()
+        push(MY_USER_ID, result)
+    except Exception as e:
+        push(MY_USER_ID, f"❌ 掃描失敗：{e}")
+
+def _job_weekly_report():
+    try:
+        result = build_weekly_report()
+        push(MY_USER_ID, result)
+    except Exception as e:
+        push(MY_USER_ID, f"❌ 週報失敗：{e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     tz = pytz.timezone("Asia/Taipei")
     scheduler = BackgroundScheduler(timezone=tz)
-    scheduler.add_job(_run_daily_scan_job, CronTrigger(hour=15, minute=30, timezone=tz))
+    # 每天 09:00 更新宇宙清單（週一到週五）
+    scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz))
+    # 每天 15:25 開始掃描（約 5 分鐘後推播）
+    scheduler.add_job(_job_daily_scan, CronTrigger(hour=15, minute=25, day_of_week="mon-fri", timezone=tz))
+    # 每週五 15:35 推週績效
+    scheduler.add_job(_job_weekly_report, CronTrigger(hour=15, minute=35, day_of_week="fri", timezone=tz))
     scheduler.start()
     yield
     scheduler.shutdown()
