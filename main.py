@@ -1,4 +1,5 @@
 import os, hashlib, hmac, base64, json
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 import requests
@@ -9,13 +10,29 @@ from stock_names import resolve, get_name
 from commands import cmd_market, cmd_holdings, cmd_scan
 from market_scanner import run_daily_scan
 import pandas as pd
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
 
 LINE_TOKEN   = os.environ["LINE_TOKEN"]
 LINE_SECRET  = os.environ.get("LINE_SECRET", "")
 MY_USER_ID   = os.environ["LINE_USER_ID"]
 GROUP_ID_FILE = "group_ids.json"
 
-app = FastAPI()
+def _run_daily_scan_job():
+    result = run_daily_scan()
+    push_all_groups(result)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    tz = pytz.timezone("Asia/Taipei")
+    scheduler = BackgroundScheduler(timezone=tz)
+    scheduler.add_job(_run_daily_scan_job, CronTrigger(hour=15, minute=30, timezone=tz))
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+app = FastAPI(lifespan=lifespan)
 
 
 # ── 群組 ID 管理 ──────────────────────────────────────
