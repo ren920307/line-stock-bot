@@ -153,6 +153,16 @@ def run_daily_scan() -> str:
     # 記錄進榜價
     _save_scan_log(top5)
 
+    CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩"
+
+    def fmt(i, s):
+        tag = " 糾結↑" if s["converged"] else ""
+        return (
+            f"{CIRCLE[i-1]} {s['name']}({s['code']})"
+            f" {s['close']:.0f}元 +{s['chg_pct']:.1f}%"
+            f" 量比{s['vol_ratio']:.1f}x{tag}"
+        )
+
     # 組推播訊息
     today = date.today().strftime("%m/%d")
     lines = [
@@ -163,28 +173,20 @@ def run_daily_scan() -> str:
         "★ TOP 5 明日重點 ★",
     ]
     for i, s in enumerate(top5, 1):
-        tag = " 糾結↑" if s["converged"] else ""
-        lines.append(
-            f"  {i}. {s['name']}（{s['code']}）"
-            f" {s['close']:.0f} +{s['chg_pct']:.1f}%"
-            f" 量比{s['vol_ratio']:.1f}x{tag}"
-        )
+        lines.append(fmt(i, s))
 
-    lines.append("\n【TOP 10 觀察名單】")
+    n10 = len(top10)
+    header = f"\n【TOP {n10} 觀察名單】" if n10 < 10 else "\n【TOP 10 觀察名單】"
+    lines.append(header)
     for i, s in enumerate(top10, 1):
-        tag = " 糾結↑" if s["converged"] else ""
-        lines.append(
-            f"{i:2}. {s['name']}（{s['code']}）"
-            f" +{s['chg_pct']:.1f}%"
-            f" 量比{s['vol_ratio']:.1f}x{tag}"
-        )
+        lines.append(fmt(i, s))
 
     lines.append(
         "\n【右側操作攻略】\n"
         "① 不追今日強勢，等明日回測\n"
         "② 回測今日收盤附近不破 → 進場\n"
         "③ 停損：跌破今日最低收盤\n"
-        "④ 首倉小，撐穩再加碼（倒金字塔）\n"
+        "④ 首倉小，撐穩再加碼(倒金字塔)\n"
         "⑤ 每次加碼停損上移"
     )
 
