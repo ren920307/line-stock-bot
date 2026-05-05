@@ -184,11 +184,18 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/update-universe")
+def update_universe():
+    """手動觸發宇宙清單更新"""
+    count = build_universe()
+    return {"status": "ok", "count": count}
+
+
 @app.get("/daily-scan")
 def daily_scan():
-    """每日掃全市場，更新 watchlist.json，推播 TOP15+TOP5 到你和所有群組"""
+    """手動觸發每日掃描"""
     result = run_daily_scan()
-    push_all_groups(result)
+    push(MY_USER_ID, result)
     return {"status": "ok", "message": result[:100]}
 
 
