@@ -90,6 +90,15 @@ def build_universe() -> int:
     print("📋 更新宇宙清單（僅上市）...")
     tse = fetch_twse()
 
+    if not tse:
+        # API 失敗，保留現有清單不覆蓋
+        print("  ⚠️ TWSE 回傳空，保留現有 universe.json")
+        try:
+            with open(UNIVERSE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f).get("count", 0)
+        except Exception:
+            return 0
+
     # 按成交金額排序，取前 300
     ranked = sorted(tse, key=lambda x: x["amount"], reverse=True)[:MAX_STOCKS]
 
