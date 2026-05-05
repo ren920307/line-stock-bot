@@ -102,7 +102,7 @@ def build_universe() -> int:
     with open(UNIVERSE_PATH, "w", encoding="utf-8") as f:
         json.dump(universe, f, ensure_ascii=False, indent=2)
 
-    print(f"  ✅ 宇宙清單更新完成：{len(ranked)} 檔（TSE {len(tse)} + OTC {len(otc)} 去重）")
+    print(f"  ✅ 宇宙清單更新完成：{len(ranked)} 檔（TSE）")
     return len(ranked)
 
 
