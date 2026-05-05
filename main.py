@@ -196,11 +196,10 @@ def update_universe():
 
 
 @app.get("/daily-scan")
-def daily_scan():
-    """手動觸發每日掃描"""
-    result = run_daily_scan()
-    push(result)
-    return {"status": "ok", "message": result[:100]}
+def daily_scan(background_tasks: BackgroundTasks):
+    """手動觸發每日掃描（背景執行，立即回應）"""
+    background_tasks.add_task(_job_daily_scan)
+    return {"status": "ok", "message": "掃描已啟動，約 5 分鐘後推播到 LINE"}
 
 
 @app.get("/scan-result")
