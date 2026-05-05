@@ -87,19 +87,11 @@ def fetch_otc() -> list:
 
 
 def build_universe() -> int:
-    print("📋 更新宇宙清單...")
+    print("📋 更新宇宙清單（僅上市）...")
     tse = fetch_twse()
-    otc = fetch_otc()
-    combined = tse + otc
-
-    # 去重（同代號保留一筆）
-    seen = {}
-    for s in combined:
-        if s["code"] not in seen:
-            seen[s["code"]] = s
 
     # 按成交金額排序，取前 300
-    ranked = sorted(seen.values(), key=lambda x: x["amount"], reverse=True)[:MAX_STOCKS]
+    ranked = sorted(tse, key=lambda x: x["amount"], reverse=True)[:MAX_STOCKS]
 
     universe = {
         "updated": date.today().isoformat(),
