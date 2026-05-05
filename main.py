@@ -145,6 +145,29 @@ def build_price_summary(code: str) -> str:
     chg_pct   = (close - prev_close) / prev_close * 100
     is_limit  = chg_pct >= 9.5
     chg_label = f"漲停 +{chg_pct:.1f}%\n關聖帝君已經給我九個聖杯" if is_limit else f"{chg_pct:+.1f}%"
+
+    # 費波計算：60日明顯低點 → 60日高點
+    swing_low  = float(df["Low"].tail(60).min())
+    swing_high = float(df["High"].tail(60).max())
+    rng = swing_high - swing_low
+    fib = {
+        "low":   swing_low,
+        "high":  swing_high,
+        "0.236": round(swing_high - rng * 0.236, 1),
+        "0.382": round(swing_high - rng * 0.382, 1),
+        "0.500": round(swing_high - rng * 0.500, 1),
+        "0.618": round(swing_high - rng * 0.618, 1),
+        "0.786": round(swing_high - rng * 0.786, 1),
+        "tp1":   round(swing_low  + rng * 1.272, 1),
+        "tp2":   round(swing_low  + rng * 1.618, 1),
+    }
+    fib_block = (
+        f"\n【費波那契（{swing_low:.1f}→{swing_high:.1f}）】\n"
+        f"回測 0.236：{fib['0.236']}　0.382：{fib['0.382']}　0.500：{fib['0.500']}\n"
+        f"回測 0.618：{fib['0.618']}　0.786：{fib['0.786']}\n"
+        f"TP1(1.272)：{fib['tp1']}　TP2(1.618)：{fib['tp2']}"
+    )
+
     return (
         f"【今日數據】\n"
         f"收：{close:.0f}（{chg_label}）\n"
@@ -152,6 +175,7 @@ def build_price_summary(code: str) -> str:
         f"量：{vol//1000:,}張\n"
         f"MA5：{last['MA5']:.1f}　MA20：{last['MA20']:.1f}　MA60：{last['MA60']:.1f}\n"
         f"60日高：{high60:.0f}　低：{low60:.0f}\n"
+        f"{fib_block}\n"
         f"\n近10日K線：\n{recent}"
     )
 

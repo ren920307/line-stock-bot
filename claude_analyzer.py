@@ -85,9 +85,10 @@ FVG（跳空未填，可能回補）：XXX～XXX　BSL（掃單目標）：XXX
 一句話判斷走勢特徵
 
 【三個進場劇本】
-① 追價｜進場 XXX　停損 XXX　目標 XXX　R:R X:1
-② 回測｜進場條件 OB/FVG XXX～XXX 撐穩　停損 XXX　目標 XXX　R:R X:1
-③ 突破｜突破 XXX 量比>X倍　停損 XXX　目標 XXX　R:R X:1
+目標價必須使用上方費波那契的 TP1 和 TP2 數字，格式嚴格如下：
+① 追價｜進場 XXX　停損 XXX　TP1 XXX　TP2 XXX　R:R X:1
+② 回測｜進場條件 OB/FVG XXX～XXX 撐穩　停損 XXX　TP1 XXX　TP2 XXX　R:R X:1
+③ 突破｜突破 XXX 量比>X倍　停損 XXX　TP1 XXX　TP2 XXX　R:R X:1
 
 【風險】
 ① XXX
