@@ -21,7 +21,7 @@ GROUP_ID_FILE = "group_ids.json"
 
 def _run_daily_scan_job():
     result = run_daily_scan()
-    push_all_groups(result)
+    push(MY_USER_ID, result)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
