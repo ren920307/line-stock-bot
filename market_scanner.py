@@ -165,11 +165,8 @@ def run_daily_scan() -> str:
     layer1.sort(key=lambda x: x["score"], reverse=True)
     top15 = layer1[:15]
 
-    # ── 第二層：TOP 5（糾結突破 or 漲幅最強）──
-    top5 = [s for s in top15 if s["converged"]][:5]
-    if len(top5) < 5:
-        extras = [s for s in top15 if not s["converged"]]
-        top5 = (top5 + extras)[:5]
+    # ── 第二層：TOP 5（分數最高，不限糾結）──
+    top5 = top15[:5]
 
     # 更新 watchlist.json
     watchlist_path = os.path.join(os.path.dirname(__file__), "watchlist.json")
