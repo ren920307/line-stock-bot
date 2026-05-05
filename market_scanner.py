@@ -5,6 +5,7 @@
 - 15:25 開始，約 5 分鐘跑完 300 檔，15:30 推播
 篩選條件：漲幅 > 4%、量比 > 2.5x、MA5 > MA20 > MA60
 """
+import gc
 import json
 import os
 import time
@@ -107,6 +108,7 @@ def run_daily_scan() -> str:
             # 抓歷史 K 線補技術指標
             df = fetch_history(s["code"], days=65)
             if df.empty or len(df) < 20:
+                del df
                 continue
 
             stock = {
@@ -114,6 +116,8 @@ def run_daily_scan() -> str:
                 "close": close, "chg_pct": chg_pct, "volume": volume,
             }
             stock = _enrich(stock, df)
+            del df
+            gc.collect()
 
             if not (stock["ma5"] and stock["ma20"] and stock["ma60"]):
                 continue
