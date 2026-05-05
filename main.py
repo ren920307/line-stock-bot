@@ -187,8 +187,12 @@ def health():
 @app.get("/update-universe")
 def update_universe():
     """手動觸發宇宙清單更新"""
+    import os as _os
+    path = _os.path.join(_os.path.dirname(__file__), "universe.json")
+    file_exists = _os.path.exists(path)
+    file_size = _os.path.getsize(path) if file_exists else 0
     count = build_universe()
-    return {"status": "ok", "count": count}
+    return {"status": "ok", "count": count, "file_exists": file_exists, "file_size": file_size}
 
 
 @app.get("/daily-scan")
