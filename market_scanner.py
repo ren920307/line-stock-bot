@@ -163,10 +163,8 @@ def run_daily_scan() -> str:
             s["vol_ratio"] / max_vol * 0.3
         )
     layer1.sort(key=lambda x: x["score"], reverse=True)
-    top15 = layer1[:15]
-
-    # ── 第二層：TOP 5（分數最高，不限糾結）──
-    top5 = top15[:5]
+    top10 = layer1[:10]
+    top5  = top10[:5]
 
     # 更新 watchlist.json
     watchlist_path = os.path.join(os.path.dirname(__file__), "watchlist.json")
@@ -176,7 +174,7 @@ def run_daily_scan() -> str:
         {"code": s["code"], "name": s["name"],
          "chg_pct": round(s["chg_pct"], 1),
          "added": date.today().isoformat()}
-        for s in top15
+        for s in top10
     ]
     data["last_scan"] = date.today().isoformat()
     with open(watchlist_path, "w", encoding="utf-8") as f:
@@ -187,25 +185,23 @@ def run_daily_scan() -> str:
     lines = [
         f"📈 強勢股掃描｜{today}",
         f"條件：多頭排列 / 漲>4% / 量比>2.5x",
-        f"共 {len(top15)} 檔通過",
         "",
+        "★ TOP 5 明日重點 ★",
     ]
-    for i, s in enumerate(top15, 1):
-        tag = " 糾結↑" if s["converged"] else ""
-        lines.append(
-            f"{i:2}. {s['name']}（{s['code']}）"
-            f" {s['close']:.0f} +{s['chg_pct']:.1f}%"
-            f" 量比{s['vol_ratio']:.1f}x{tag}"
-        )
-
-    lines.append(f"\n★ 明日重點 TOP5 ★")
-    lines.append("（糾結均線發散優先）")
-    lines.append("")
     for i, s in enumerate(top5, 1):
         tag = " 糾結↑" if s["converged"] else ""
         lines.append(
             f"  {i}. {s['name']}（{s['code']}）"
             f" {s['close']:.0f} +{s['chg_pct']:.1f}%"
+            f" 量比{s['vol_ratio']:.1f}x{tag}"
+        )
+
+    lines.append(f"\n【TOP 10 觀察名單】")
+    for i, s in enumerate(top10, 1):
+        tag = " 糾結↑" if s["converged"] else ""
+        lines.append(
+            f"{i:2}. {s['name']}（{s['code']}）"
+            f" +{s['chg_pct']:.1f}%"
             f" 量比{s['vol_ratio']:.1f}x{tag}"
         )
 
