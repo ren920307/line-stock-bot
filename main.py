@@ -30,16 +30,16 @@ def _job_update_universe():
 def _job_daily_scan():
     try:
         result = run_daily_scan()
-        push(MY_USER_ID, result)
+        push(result)
     except Exception as e:
-        push(MY_USER_ID, f"❌ 掃描失敗：{e}")
+        push(f"❌ 掃描失敗：{e}")
 
 def _job_weekly_report():
     try:
         result = build_weekly_report()
-        push(MY_USER_ID, result)
+        push(result)
     except Exception as e:
-        push(MY_USER_ID, f"❌ 週報失敗：{e}")
+        push(f"❌ 週報失敗：{e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -199,7 +199,7 @@ def update_universe():
 def daily_scan():
     """手動觸發每日掃描"""
     result = run_daily_scan()
-    push(MY_USER_ID, result)
+    push(result)
     return {"status": "ok", "message": result[:100]}
 
 
