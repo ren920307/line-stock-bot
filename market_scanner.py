@@ -8,8 +8,9 @@ import pandas as pd
 import json
 import os
 import re
+import time
 from datetime import date
-from fugle_fetcher import fetch_history
+from fugle_fetcher import fetch_history, fetch_quote
 
 # 直接過濾黑名單（下市/低勝率）
 BLACKLIST = {"6434", "2363", "1503", "1514", "3217", "3592"}
@@ -126,12 +127,27 @@ def run_daily_scan() -> str:
     if not stocks:
         return "全市場資料抓取失敗，請稍後再試。"
 
-    # 漲幅前 80 檔補技術指標
+    # TWSE 粗篩漲幅前 80 檔，再用 Fugle 逐一驗證報價（分散請求避免限速）
     candidates = sorted(stocks, key=lambda x: x["chg_pct"], reverse=True)[:80]
 
     enriched = []
     for s in candidates:
         try:
+            time.sleep(1)  # ~60 req/min 安全範圍
+
+            # 用 Fugle 覆蓋 TWSE 的漲幅與收盤（TWSE 有時計算有誤）
+            q = fetch_quote(s["code"])
+            if q.get("chg_pct") is not None:
+                s["chg_pct"] = q["chg_pct"]
+            if q.get("close"):
+                s["close"] = q["close"]
+            if q.get("volume"):
+                s["volume"] = q["volume"] // 1000
+
+            # 重新確認漲幅門檻
+            if s["chg_pct"] < MIN_CHANGE_PCT:
+                continue
+
             df = fetch_history(s["code"], days=65)
             if df.empty or len(df) < 20:
                 continue
