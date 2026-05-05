@@ -187,16 +187,8 @@ def health():
 @app.get("/update-universe")
 def update_universe():
     """手動觸發宇宙清單更新"""
-    import requests as _req
-    # 先確認 TWSE 可連
-    try:
-        r = _req.get("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
-                     headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
-        twse_rows = len(r.json())
-    except Exception as e:
-        return {"status": "error", "detail": f"TWSE 無法連線：{e}"}
     count = build_universe()
-    return {"status": "ok", "count": count, "twse_rows": twse_rows}
+    return {"status": "ok", "count": count}
 
 
 @app.get("/daily-scan")

@@ -40,7 +40,7 @@ def fetch_twse() -> list:
     try:
         r = requests.get(
             "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
-            headers={"User-Agent": "Mozilla/5.0"}, timeout=15
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=15, verify=False
         )
         result = []
         for d in r.json():
@@ -62,7 +62,7 @@ def fetch_otc() -> list:
     try:
         r = requests.get(
             "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
-            headers={"User-Agent": "Mozilla/5.0"}, timeout=15
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=15, verify=False
         )
         data = r.json()
         if not data:
