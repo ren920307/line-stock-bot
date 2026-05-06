@@ -1,28 +1,116 @@
 {
   "holdings": [
     {
-      "code": "3260",
-      "name": "威剛"
-    },
-    {
-      "code": "3357",
-      "name": "臺慶科"
-    },
-    {
-      "code": "2327",
-      "name": "國巨"
-    },
-    {
       "code": "1785",
-      "name": "光洋科"
+      "name": "光洋科",
+      "cost": 162.73,
+      "stop": 149.7,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "2337",
+      "name": "旺宏",
+      "cost": 161.48,
+      "stop": 148.6,
+      "is_small": false,
+      "max_position": 100
     },
     {
       "code": "2449",
-      "name": "京元電子"
+      "name": "京元電子",
+      "cost": 292.67,
+      "stop": 269.3,
+      "is_small": false,
+      "max_position": 100
     },
     {
-      "code": "2316",
-      "name": "楠梓電"
+      "code": "2455",
+      "name": "全新",
+      "cost": 296.42,
+      "stop": 272.7,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "3030",
+      "name": "德律",
+      "cost": 338.8,
+      "stop": 311.7,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "3189",
+      "name": "景碩",
+      "cost": 387.55,
+      "stop": 356.5,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "3260",
+      "name": "威剛",
+      "cost": 238.42,
+      "stop": 219.3,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "3691",
+      "name": "碩禾",
+      "cost": 128.93,
+      "stop": 118.6,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "3693",
+      "name": "營邦",
+      "cost": 676.18,
+      "stop": 622.1,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "4768",
+      "name": "晶呈科技",
+      "cost": 511.5,
+      "stop": 470.6,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "5474",
+      "name": "聰泰",
+      "cost": 175.75,
+      "stop": 161.7,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "6531",
+      "name": "愛普*",
+      "cost": 791.12,
+      "stop": 727.8,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "8027",
+      "name": "鈦昇",
+      "cost": 205.29,
+      "stop": 188.9,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "8064",
+      "name": "東捷",
+      "cost": 121.17,
+      "stop": 111.5,
+      "is_small": false,
+      "max_position": 100
     }
   ],
   "themes": {
