@@ -21,12 +21,12 @@ SCAN_LOG_PATH = os.path.join(os.path.dirname(__file__), "scan_log.json")
 
 # 強勢追價組門檻
 MOMENTUM_MIN_CHG    = 4.0   # 漲幅 > 4%
-MOMENTUM_MIN_VOL    = 2.5   # 量比 > 2.5x（用前20日不含今日）
+MOMENTUM_MIN_VOL    = 2.0   # 量比 > 2.0x（放寬，原 2.5x）
 
 # 回測進場組門檻
-PULLBACK_MAX_CHG    = 2.0   # 今日漲幅 < 2%（正在回調）
+PULLBACK_MAX_CHG    = 3.0   # 今日漲幅 < 3%（放寬，原 2%）
 PULLBACK_MIN_CHG    = -3.0  # 今日跌幅 > -3%（沒有崩跌）
-PULLBACK_MAX_VOL    = 1.2   # 量比 < 1.2x（縮量）
+PULLBACK_MAX_VOL    = 1.8   # 量比 < 1.8x（放寬，原 1.2x）
 PULLBACK_DAYS       = 5     # 近幾日內曾有強勢
 
 
@@ -68,9 +68,10 @@ def _enrich(s: dict, df: pd.DataFrame) -> dict:
     last = df.iloc[-1]
 
     # 量比：用前20日不含今日
+    # df["Volume"] 是 Fugle 歷史 API 的張數，s["volume"] 也已換算為張
     hist_vol  = df["Volume"].iloc[-21:-1]
     avg_vol   = hist_vol.mean() if len(hist_vol) >= 5 else df["Volume"].tail(20).mean()
-    vol_ratio = s["volume"] * 1000 / avg_vol if avg_vol > 0 else 0
+    vol_ratio = s["volume"] / avg_vol if avg_vol > 0 else 0
 
     ma5  = float(last["MA5"])  if not pd.isna(last["MA5"])  else None
     ma20 = float(last["MA20"]) if not pd.isna(last["MA20"]) else None
@@ -105,10 +106,10 @@ def _enrich(s: dict, df: pd.DataFrame) -> dict:
 
 
 def _is_uptrend(s: dict) -> bool:
-    """MA 多頭排列且現價站上 MA20"""
+    """中長期多頭：MA20 > MA60 且現價站上 MA20（MA5 不強制，震盪日容錯）"""
     return (
-        s["ma5"] and s["ma20"] and s["ma60"] and
-        s["ma5"] > s["ma20"] > s["ma60"] and
+        s["ma20"] and s["ma60"] and
+        s["ma20"] > s["ma60"] and
         s["close"] > s["ma20"]
     )
 
@@ -146,6 +147,13 @@ def run_daily_scan() -> str:
     momentum_passed = []  # 強勢追價組候選
     pullback_passed = []  # 回測進場組候選
 
+    cnt_total     = len(universe)
+    cnt_quote_ok  = 0   # 報價正常
+    cnt_hist_ok   = 0   # 歷史K線正常
+    cnt_uptrend   = 0   # 通過多頭排列
+    cnt_momentum  = 0   # 通過追價條件
+    cnt_pullback  = 0   # 通過回測條件
+
     for s in universe:
         try:
             time.sleep(1)
@@ -153,6 +161,7 @@ def run_daily_scan() -> str:
             q = fetch_quote(s["code"])
             if not q or q.get("chg_pct") is None or q.get("close") is None:
                 continue
+            cnt_quote_ok += 1
 
             chg_pct = q["chg_pct"]
             close   = q["close"]
@@ -163,6 +172,7 @@ def run_daily_scan() -> str:
             if df.empty or len(df) < 25:
                 del df
                 continue
+            cnt_hist_ok += 1
 
             stock = {
                 "code": s["code"], "name": s["name"],
@@ -174,6 +184,7 @@ def run_daily_scan() -> str:
 
             if not _is_uptrend(stock):
                 continue
+            cnt_uptrend += 1
 
             # ── 強勢追價組 ──
             if (chg_pct >= MOMENTUM_MIN_CHG and
@@ -182,14 +193,16 @@ def run_daily_scan() -> str:
                 near_high = stock["close"] >= stock["high60"] * 0.97
                 stock["near_high"] = near_high
                 momentum_passed.append(stock)
+                cnt_momentum += 1
 
             # ── 回測進場組 ──
             elif (PULLBACK_MIN_CHG <= chg_pct <= PULLBACK_MAX_CHG and
                     stock["vol_ratio"] <= PULLBACK_MAX_VOL and
-                    stock["max_recent_chg"] >= 4.0 and
+                    stock["max_recent_chg"] >= 3.5 and
                     stock["dist_ma20"] is not None and
-                    abs(stock["dist_ma20"]) <= 5.0):
+                    abs(stock["dist_ma20"]) <= 8.0):
                 pullback_passed.append(stock)
+                cnt_pullback += 1
 
         except Exception:
             continue
@@ -265,6 +278,15 @@ def run_daily_scan() -> str:
         "② 回測組：今日或明日止跌K確認（紅K或下影線）才進\n"
         "③ 兩組停損均設支撐下方，R:R用TP2計算需≥1:3\n"
         "④ 首倉小，確認後倒金字塔加碼"
+    )
+
+    lines.append(
+        f"\n【掃描診斷】總計{cnt_total}檔"
+        f" / 報價OK:{cnt_quote_ok}"
+        f" / K線OK:{cnt_hist_ok}"
+        f" / 多頭排列:{cnt_uptrend}"
+        f" / 追價過關:{cnt_momentum}"
+        f" / 回測過關:{cnt_pullback}"
     )
 
     return "\n".join(lines)
