@@ -174,6 +174,10 @@ def run_daily_scan() -> str:
                 continue
             cnt_hist_ok += 1
 
+            # intraday volume 盤後可能為 0，fallback 用歷史最後一根
+            if volume == 0 and not df.empty:
+                volume = int(df["Volume"].iloc[-1])
+
             stock = {
                 "code": s["code"], "name": s["name"],
                 "close": close, "chg_pct": chg_pct, "volume": volume,
