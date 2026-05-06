@@ -95,29 +95,26 @@ def deep_analyze(code: str, name: str, price_summary: str) -> str:
 ▶壓力：XXX元　TP1：XXX元　TP2：XXX元
 
 【整體傾向】
-▶R:R：現價XXX元進場，TP1 XXX元，停損XXX元，R:R(TP1)約X:1
-▶若R:R(TP1) < 1:3：現價不宜追，等回測至 XXX元
+▶R:R：現價進場約X:1（TP1基準）
+▶若R:R < 1:3：現價不宜追，等回測至 XXX元
 ▶結論：偏多等回測 / 可追 / 觀望 / 偏空迴避，一句話說明理由
 
 【四個進場劇本】
 停損統一：XXX元（來源說明）
 
 ①回測｜XXX元（費波+OB共振）止跌K確認
-進場 XXX元　停損 XXX元　TP1 XXX元　TP2 XXX元
-R:R(TP1) = (TP1-進場)÷(進場-停損) = X:1　有效 X日
+進場 XXX元　停損 XXX元　TP1 XXX元　TP2 XXX元　R:R X:1　有效 X日
 
 ②突破｜收盤突破XXX元，量大於1.5倍均量
-停損A：XXX元（量比1.5x～2x）　R:R(TP1) X:1
-停損B：突破K中點XXX元（量大於2x）　R:R(TP1) X:1　有效 X日
+停損A：XXX元（量比1.5x～2x）　R:R X:1
+停損B：突破K中點XXX元（量大於2x）　R:R X:1　有效 X日
 
 ③追價｜XXX元站穩（BSL掃單完成）
-進場 XXX元　停損 XXX元　TP1 XXX元　TP2 XXX元
-R:R(TP1) = (TP1-進場)÷(進場-停損) = X:1　有效 X日
-若R:R(TP1) < 1:2直接寫「不建議，R:R僅X:1」
+進場 XXX元　停損 XXX元　TP1 XXX元　TP2 XXX元　R:R X:1　有效 X日
+若R:R < 1:2直接寫「不建議，R:R僅X:1」
 
 ④加碼｜已持有獲利≥5%，量縮回測MA5或費波0.5不破
-加碼價 XXX元　新停損上移至上次成本×0.97（最少距加碼價3%）
-TP1 XXX元　TP2 XXX元　R:R(TP1) X:1　有效 X日
+加碼價 XXX元　新停損 XXX元　TP1 XXX元　TP2 XXX元　R:R X:1　有效 X日
 若停損距離不足3%直接寫「不建議，停損太緊」"""
 
     resp = requests.post(

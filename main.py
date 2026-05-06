@@ -252,7 +252,7 @@ def _do_deep_analysis(code: str, name: str, reply_token: str):
     label = f"{name}（{code}）" if name else code
     # 今日數據區塊：取費波那契之前的部分
     today_block = summary.split("\n【費波那契")[0]
-    reply(reply_token, f"【{label} 深度分析】{today_block}\n\n{result}")
+    reply(reply_token, f"【{label} 深度分析】\n{today_block}\n\n{result}")
 
 
 @app.post("/webhook")
