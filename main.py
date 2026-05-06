@@ -54,15 +54,24 @@ def _job_health_check():
         import traceback
         push(f"❌ 健檢失敗：{e}\n{traceback.format_exc()[-200:]}")
 
+def _job_keepalive():
+    """每 10 分鐘打自己一次，避免 Render 免費方案休眠"""
+    try:
+        requests.get("https://line-stock-bot-a54m.onrender.com/", timeout=10)
+    except Exception:
+        pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     tz = pytz.timezone("Asia/Taipei")
+    # 每 10 分鐘 keepalive，避免 Render 免費方案休眠
+    scheduler.add_job(_job_keepalive, 'interval', minutes=10)
     # 每天 09:00 更新宇宙清單（週一到週五）
     scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz))
     # 每天 15:25 開始掃描（約 10 分鐘後推播）
     scheduler.add_job(_job_daily_scan, CronTrigger(hour=15, minute=25, day_of_week="mon-fri", timezone=tz))
-    # 每天 15:30 持股健檢
-    scheduler.add_job(_job_health_check, CronTrigger(hour=15, minute=30, day_of_week="mon-fri", timezone=tz))
+    # 每天 16:00 持股健檢（避開掃描 API 配額衝突）
+    scheduler.add_job(_job_health_check, CronTrigger(hour=16, minute=0, day_of_week="mon-fri", timezone=tz))
     # 每週五 15:35 推週績效
     scheduler.add_job(_job_weekly_report, CronTrigger(hour=15, minute=35, day_of_week="fri", timezone=tz))
     scheduler.start()
@@ -95,12 +104,17 @@ def _register_group(gid: str):
 def push(text: str, target_id: str = None):
     """推播給指定 ID（預設推給你）"""
     tid = target_id or MY_USER_ID
-    requests.post(
-        "https://api.line.me/v2/bot/message/push",
-        headers={"Authorization": f"Bearer {LINE_TOKEN}", "Content-Type": "application/json"},
-        json={"to": tid, "messages": [{"type": "text", "text": text}]},
-        timeout=10,
-    )
+    try:
+        r = requests.post(
+            "https://api.line.me/v2/bot/message/push",
+            headers={"Authorization": f"Bearer {LINE_TOKEN}", "Content-Type": "application/json"},
+            json={"to": tid, "messages": [{"type": "text", "text": text[:4900]}]},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            print(f"[push] LINE API 錯誤 {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        print(f"[push] 推播失敗：{e}")
 
 def reply(token: str, text: str):
     """回覆給發訊息的來源（個人或群組）"""

@@ -251,8 +251,8 @@ def cmd_health_check() -> str:
             high60 = float(df["High"].tail(60).max())
             tp2 = round(low60 + (high60 - low60) * 1.618, 1)
 
-            # 加碼條件：回測 MA5（現價在 MA5 ±2% 內）
-            if ma5 and price <= ma5 * 1.02:
+            # 加碼條件：回測 MA5（現價距 MA5 在 ±2% 內）
+            if ma5 and abs(price - ma5) / ma5 <= 0.02:
                 near_ma5 = True
 
             # 止跌 K：收紅（今日漲）或下影線（low 比 close 低 1% 以上）
