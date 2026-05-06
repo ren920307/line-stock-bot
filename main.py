@@ -32,10 +32,12 @@ def _job_update_universe():
 
 def _job_daily_scan():
     try:
+        push("⏳ 掃描開始...")
         result = run_daily_scan()
         push(result)
     except Exception as e:
-        push(f"❌ 掃描失敗：{e}")
+        import traceback
+        push(f"❌ 掃描失敗：{e}\n{traceback.format_exc()[-300:]}")
 
 def _job_weekly_report():
     try:
