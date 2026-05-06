@@ -250,8 +250,7 @@ def _do_deep_analysis(code: str, name: str, reply_token: str):
         return
     result = deep_analyze(code, name, summary)
     label = f"{name}（{code}）" if name else code
-    today_block = summary.split("\n近10日")[0]
-    reply(reply_token, f"【{label} 深度分析】\n\n{today_block}\n\n{result}")
+    reply(reply_token, f"【{label} 深度分析】\n\n{result}")
 
 
 @app.post("/webhook")
