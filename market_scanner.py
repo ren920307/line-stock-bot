@@ -1,9 +1,12 @@
 """
 全市場強勢股掃描（右側交易邏輯）
 - 宇宙清單來自 universe.json（每日 09:00 更新）
-- 報價 / 技術指標全部用 Fugle（不碰 TWSE 報價）
-- 15:25 開始，約 5 分鐘跑完 300 檔，15:30 推播
-篩選條件：漲幅 > 4%、量比 > 2.5x、MA5 > MA20 > MA60
+- 報價 / 技術指標全部用 Fugle
+- 15:25 開始，約 5 分鐘跑完，15:30 推播
+
+兩組結果：
+  強勢追價組 TOP5：今日動能強，明日等回測確認
+  回測進場組 TOP5：近期強勢、今日縮量回測，位置接近費波/MA20
 """
 import gc
 import json
@@ -13,12 +16,18 @@ import pandas as pd
 from datetime import date
 from fugle_fetcher import fetch_history, fetch_quote
 
-UNIVERSE_PATH  = os.path.join(os.path.dirname(__file__), "universe.json")
-SCAN_LOG_PATH  = os.path.join(os.path.dirname(__file__), "scan_log.json")
+UNIVERSE_PATH = os.path.join(os.path.dirname(__file__), "universe.json")
+SCAN_LOG_PATH = os.path.join(os.path.dirname(__file__), "scan_log.json")
 
-MIN_CHANGE_PCT   = 4.0
-MIN_VOL_RATIO    = 2.5
-MA_SPREAD_THRESH = 0.08
+# 強勢追價組門檻
+MOMENTUM_MIN_CHG    = 4.0   # 漲幅 > 4%
+MOMENTUM_MIN_VOL    = 2.5   # 量比 > 2.5x（用前20日不含今日）
+
+# 回測進場組門檻
+PULLBACK_MAX_CHG    = 2.0   # 今日漲幅 < 2%（正在回調）
+PULLBACK_MIN_CHG    = -3.0  # 今日跌幅 > -3%（沒有崩跌）
+PULLBACK_MAX_VOL    = 1.2   # 量比 < 1.2x（縮量）
+PULLBACK_DAYS       = 5     # 近幾日內曾有強勢
 
 
 def _load_universe() -> list:
@@ -30,33 +39,81 @@ def _load_universe() -> list:
         return []
 
 
+def _calc_fib_position(close: float, low60: float, high60: float) -> str:
+    """回傳現價在費波哪個區間（從低點到高點）"""
+    rng = high60 - low60
+    if rng <= 0:
+        return ""
+    ratio = (close - low60) / rng
+    if ratio >= 1.0:
+        return "突破前高"
+    elif ratio >= 0.786:
+        return "費波0.786以上"
+    elif ratio >= 0.618:
+        return "費波0.618～0.786"
+    elif ratio >= 0.500:
+        return "費波0.500～0.618"
+    elif ratio >= 0.382:
+        return "費波0.382～0.500"
+    elif ratio >= 0.236:
+        return "費波0.236～0.382"
+    else:
+        return "費波0.236以下"
+
+
 def _enrich(s: dict, df: pd.DataFrame) -> dict:
     df["MA5"]  = df["Close"].rolling(5).mean()
     df["MA20"] = df["Close"].rolling(20).mean()
     df["MA60"] = df["Close"].rolling(60).mean()
     last = df.iloc[-1]
 
-    avg_vol   = df["Volume"].tail(20).mean()
+    # 量比：用前20日不含今日
+    hist_vol  = df["Volume"].iloc[-21:-1]
+    avg_vol   = hist_vol.mean() if len(hist_vol) >= 5 else df["Volume"].tail(20).mean()
     vol_ratio = s["volume"] * 1000 / avg_vol if avg_vol > 0 else 0
 
     ma5  = float(last["MA5"])  if not pd.isna(last["MA5"])  else None
     ma20 = float(last["MA20"]) if not pd.isna(last["MA20"]) else None
     ma60 = float(last["MA60"]) if not pd.isna(last["MA60"]) else None
 
-    converged = False
-    if ma5 and ma20 and ma60 and min(ma5, ma20, ma60) > 0:
-        spread = (max(ma5, ma20, ma60) - min(ma5, ma20, ma60)) / min(ma5, ma20, ma60)
-        converged = spread < MA_SPREAD_THRESH
+    high60 = float(df["High"].tail(60).max())
+    low60  = float(df["Low"].tail(60).min())
 
-    s["ma5"]       = round(ma5,  1) if ma5  else None
-    s["ma20"]      = round(ma20, 1) if ma20 else None
-    s["ma60"]      = round(ma60, 1) if ma60 else None
-    s["vol_ratio"] = round(vol_ratio, 1)
-    s["converged"] = converged
+    # 近5日最大單日漲幅（回測組用）
+    recent5 = df.tail(6)
+    max_recent_chg = 0.0
+    for i in range(1, len(recent5)):
+        prev_c = float(recent5.iloc[i-1]["Close"])
+        curr_c = float(recent5.iloc[i]["Close"])
+        if prev_c > 0:
+            chg = (curr_c - prev_c) / prev_c * 100
+            max_recent_chg = max(max_recent_chg, chg)
+
+    # 現價距 MA20 的百分比
+    dist_ma20 = round((s["close"] - ma20) / ma20 * 100, 1) if ma20 else None
+
+    s["ma5"]            = round(ma5,  1) if ma5  else None
+    s["ma20"]           = round(ma20, 1) if ma20 else None
+    s["ma60"]           = round(ma60, 1) if ma60 else None
+    s["vol_ratio"]      = round(vol_ratio, 1)
+    s["high60"]         = round(high60, 1)
+    s["low60"]          = round(low60, 1)
+    s["fib_pos"]        = _calc_fib_position(s["close"], low60, high60)
+    s["max_recent_chg"] = round(max_recent_chg, 1)
+    s["dist_ma20"]      = dist_ma20
     return s
 
 
-def _save_scan_log(top5: list):
+def _is_uptrend(s: dict) -> bool:
+    """MA 多頭排列且現價站上 MA20"""
+    return (
+        s["ma5"] and s["ma20"] and s["ma60"] and
+        s["ma5"] > s["ma20"] > s["ma60"] and
+        s["close"] > s["ma20"]
+    )
+
+
+def _save_scan_log(momentum: list, pullback: list):
     try:
         try:
             with open(SCAN_LOG_PATH, "r", encoding="utf-8") as f:
@@ -65,12 +122,11 @@ def _save_scan_log(top5: list):
             log = {}
 
         today = date.today().isoformat()
-        log[today] = [
-            {"code": s["code"], "name": s["name"], "entry_price": s["close"]}
-            for s in top5
-        ]
+        log[today] = {
+            "momentum": [{"code": s["code"], "name": s["name"], "price": s["close"]} for s in momentum],
+            "pullback": [{"code": s["code"], "name": s["name"], "price": s["close"]} for s in pullback],
+        }
 
-        # 只保留最近 30 天
         keys = sorted(log.keys())[-30:]
         log = {k: log[k] for k in keys}
 
@@ -87,8 +143,9 @@ def run_daily_scan() -> str:
 
     print(f"  掃描 {len(universe)} 檔...")
 
-    # 逐一用 Fugle 抓報價 + 技術指標（每秒 1 檔）
-    passed = []
+    momentum_passed = []  # 強勢追價組候選
+    pullback_passed = []  # 回測進場組候選
+
     for s in universe:
         try:
             time.sleep(1)
@@ -99,15 +156,11 @@ def run_daily_scan() -> str:
 
             chg_pct = q["chg_pct"]
             close   = q["close"]
-            volume  = (q.get("volume") or 0) // 1000  # 張
+            volume  = (q.get("volume") or 0) // 1000
 
-            # 漲幅初篩
-            if chg_pct < MIN_CHANGE_PCT:
-                continue
-
-            # 抓歷史 K 線補技術指標
-            df = fetch_history(s["code"], days=65)
-            if df.empty or len(df) < 20:
+            # 抓歷史 K 線
+            df = fetch_history(s["code"], days=70)
+            if df.empty or len(df) < 25:
                 del df
                 continue
 
@@ -119,75 +172,99 @@ def run_daily_scan() -> str:
             del df
             gc.collect()
 
-            if not (stock["ma5"] and stock["ma20"] and stock["ma60"]):
-                continue
-            if not (stock["ma5"] > stock["ma20"] > stock["ma60"]):
-                continue
-            if stock["close"] <= stock["ma20"]:
-                continue
-            if stock["vol_ratio"] < MIN_VOL_RATIO:
+            if not _is_uptrend(stock):
                 continue
 
-            passed.append(stock)
+            # ── 強勢追價組 ──
+            if (chg_pct >= MOMENTUM_MIN_CHG and
+                    stock["vol_ratio"] >= MOMENTUM_MIN_VOL):
+                # 距前高太近（< 3%）扣分，不排除但降權
+                near_high = stock["close"] >= stock["high60"] * 0.97
+                stock["near_high"] = near_high
+                momentum_passed.append(stock)
+
+            # ── 回測進場組 ──
+            elif (PULLBACK_MIN_CHG <= chg_pct <= PULLBACK_MAX_CHG and
+                    stock["vol_ratio"] <= PULLBACK_MAX_VOL and
+                    stock["max_recent_chg"] >= 4.0 and
+                    stock["dist_ma20"] is not None and
+                    abs(stock["dist_ma20"]) <= 5.0):
+                pullback_passed.append(stock)
 
         except Exception:
             continue
 
-    if not passed:
-        return "今日無符合條件的強勢股。"
+    # ── 強勢追價組排序 ──
+    if momentum_passed:
+        max_chg = max(s["chg_pct"] for s in momentum_passed)
+        max_vol = max(s["vol_ratio"] for s in momentum_passed)
+        for s in momentum_passed:
+            s["score"] = (
+                s["chg_pct"] / max_chg * 0.5 +
+                s["vol_ratio"] / max_vol * 0.3 +
+                (0.0 if s["near_high"] else 0.2)   # 距前高遠加分
+            )
+        momentum_passed.sort(key=lambda x: x["score"], reverse=True)
 
-    # 加權分數排序
-    max_chg = max(s["chg_pct"] for s in passed)
-    max_vol = max(s["vol_ratio"] for s in passed)
-    for s in passed:
-        s["score"] = (
-            (0.2 if s["converged"] else 0) +
-            s["chg_pct"] / max_chg * 0.5 +
-            s["vol_ratio"] / max_vol * 0.3
-        )
-    passed.sort(key=lambda x: x["score"], reverse=True)
+    # ── 回測進場組排序（距MA20越近越好）──
+    if pullback_passed:
+        pullback_passed.sort(key=lambda x: abs(x["dist_ma20"]))
 
-    top5  = passed[:5]
-    top10 = passed[:10]
+    top_m = momentum_passed[:5]
+    top_p = pullback_passed[:5]
 
-    # 記錄進榜價
-    _save_scan_log(top5)
+    _save_scan_log(top_m, top_p)
 
     CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩"
+    today  = date.today().strftime("%m/%d")
 
-    def fmt(i, s):
-        tag = " 糾結↑" if s["converged"] else ""
+    def fmt_momentum(i, s):
+        high_tag = " ⚠近前高" if s["near_high"] else ""
         return (
             f"{CIRCLE[i-1]} {s['name']}({s['code']})"
             f" {s['close']:.0f}元 +{s['chg_pct']:.1f}%"
-            f" 量比{s['vol_ratio']:.1f}x{tag}"
+            f" 量比{s['vol_ratio']:.1f}x"
+            f" {s['fib_pos']}{high_tag}"
         )
 
-    # 組推播訊息
-    today = date.today().strftime("%m/%d")
-    lines = [
-        f"📈 強勢股掃描｜{today}",
-        f"條件：多頭排列 / 漲>4% / 量比>2.5x",
-        f"共 {len(passed)} 檔通過",
-        "",
-        "★ TOP 5 明日重點 ★",
-    ]
-    for i, s in enumerate(top5, 1):
-        lines.append(fmt(i, s))
+    def fmt_pullback(i, s):
+        dist_str = f"MA20{'↑' if s['dist_ma20'] >= 0 else '↓'}{abs(s['dist_ma20']):.1f}%"
+        return (
+            f"{CIRCLE[i-1]} {s['name']}({s['code']})"
+            f" {s['close']:.0f}元 {s['chg_pct']:+.1f}%"
+            f" 量比{s['vol_ratio']:.1f}x"
+            f" {dist_str} {s['fib_pos']}"
+        )
 
-    n10 = len(top10)
-    header = f"\n【TOP {n10} 觀察名單】" if n10 < 10 else "\n【TOP 10 觀察名單】"
-    lines.append(header)
-    for i, s in enumerate(top10, 1):
-        lines.append(fmt(i, s))
+    lines = [f"【強勢股掃描】{today}"]
 
+    # 強勢追價組
+    lines.append("")
+    if top_m:
+        lines.append(f"★ 強勢追價 TOP{len(top_m)}（今日動能強，明日等回測）★")
+        lines.append("條件：漲>4% / 量比>2.5x / MA多頭")
+        for i, s in enumerate(top_m, 1):
+            lines.append(fmt_momentum(i, s))
+    else:
+        lines.append("★ 強勢追價：今日無符合標的")
+
+    # 回測進場組
+    lines.append("")
+    if top_p:
+        lines.append(f"★ 回測進場 TOP{len(top_p)}（縮量回測，位置佳）★")
+        lines.append("條件：近5日曾漲>4% / 今日縮量 / 距MA20在5%內")
+        for i, s in enumerate(top_p, 1):
+            lines.append(fmt_pullback(i, s))
+    else:
+        lines.append("★ 回測進場：今日無符合標的")
+
+    # 操作提示
     lines.append(
-        "\n【右側操作攻略】\n"
-        "① 不追今日強勢，等明日回測\n"
-        "② 回測今日收盤附近不破 → 進場\n"
-        "③ 停損：跌破今日最低收盤\n"
-        "④ 首倉小，撐穩再加碼(倒金字塔)\n"
-        "⑤ 每次加碼停損上移"
+        "\n【操作提示】\n"
+        "① 追價組：明日回測今日收盤不破才進，停損跌破今日低點\n"
+        "② 回測組：今日或明日止跌K確認（紅K或下影線）才進\n"
+        "③ 兩組停損均設支撐下方，R:R用TP2計算需≥1:3\n"
+        "④ 首倉小，確認後倒金字塔加碼"
     )
 
     return "\n".join(lines)
