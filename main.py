@@ -247,7 +247,7 @@ def test_scan():
                 del df
                 continue
             cnt_hist_ok += 1
-            volume = (q.get("volume") or 0) // 1000
+            volume = q.get("volume") or 0
             if volume == 0 and not df.empty:
                 volume = int(df["Volume"].iloc[-1])
             stock = {"code": s["code"], "name": s["name"], "close": q["close"], "chg_pct": q["chg_pct"], "volume": volume}

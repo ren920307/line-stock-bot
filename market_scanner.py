@@ -165,7 +165,7 @@ def run_daily_scan() -> str:
 
             chg_pct = q["chg_pct"]
             close   = q["close"]
-            volume  = (q.get("volume") or 0) // 1000
+            volume  = q.get("volume") or 0   # 單位：股（與歷史K線一致）
 
             # 抓歷史 K 線
             df = fetch_history(s["code"], days=70)
