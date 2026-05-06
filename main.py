@@ -1,5 +1,6 @@
 import os, hashlib, hmac, base64, json
 from contextlib import asynccontextmanager
+from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 import requests
@@ -20,6 +21,8 @@ LINE_TOKEN   = os.environ["LINE_TOKEN"]
 LINE_SECRET  = os.environ.get("LINE_SECRET", "")
 MY_USER_ID   = os.environ["LINE_USER_ID"]
 GROUP_ID_FILE = "group_ids.json"
+
+scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Taipei"))
 
 def _job_update_universe():
     try:
@@ -44,7 +47,6 @@ def _job_weekly_report():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     tz = pytz.timezone("Asia/Taipei")
-    scheduler = BackgroundScheduler(timezone=tz)
     # 每天 09:00 更新宇宙清單（週一到週五）
     scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz))
     # 每天 15:25 開始掃描（約 5 分鐘後推播）
@@ -220,9 +222,9 @@ def update_universe():
 
 
 @app.get("/daily-scan")
-def daily_scan(background_tasks: BackgroundTasks):
-    """手動觸發每日掃描（背景執行，立即回應）"""
-    background_tasks.add_task(_job_daily_scan)
+def daily_scan():
+    """手動觸發每日掃描（APScheduler 背景執行，不受 Render worker 回收影響）"""
+    scheduler.add_job(_job_daily_scan, 'date', run_date=datetime.now(), id='manual_scan', replace_existing=True)
     return {"status": "ok", "message": "掃描已啟動，約 5 分鐘後推播到 LINE"}
 
 

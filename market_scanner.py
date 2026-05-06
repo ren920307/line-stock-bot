@@ -167,6 +167,8 @@ def run_daily_scan() -> str:
             close   = q["close"]
             volume  = q.get("volume") or 0   # 單位：股（與歷史K線一致）
 
+            time.sleep(1)  # quote 和 history 之間加間隔，避免超過 Fugle 60/min 上限
+
             # 抓歷史 K 線
             df = fetch_history(s["code"], days=70)
             if df.empty or len(df) < 25:
