@@ -91,82 +91,74 @@ def analyze(code: str, name: str = "") -> str:
     fvg_high = round(float(open_), 1)
     has_fvg  = fvg_high > fvg_low * 1.005
 
-    # 支撐阻力
-    support1 = round(prev_close, 1)  # 昨收
-    support2 = round(float(ob_end), 1)          # OB頂
-    resist1  = round(float(high60), 1)           # 前高
+    resist1  = round(float(high60), 1)   # 前高 = 壓力 / BSL
+    support1 = round(float(ma20), 1)     # MA20 = 主要支撐
+    support2 = round(float(ob_end), 1)   # OB頂 = 次要支撐
 
-    # 進場、停損、目標
+    # 進場區：FVG優先，否則MA20
     if has_fvg:
-        entry_desc = f"回測FVG缺口區（{fvg_low}～{fvg_high}）撐穩"
-        entry_mid  = (fvg_low + fvg_high) / 2
+        entry_desc = f"回測FVG（{fvg_low}～{fvg_high}）止跌確認"
+        entry_ref  = round((fvg_low + fvg_high) / 2, 1)
     else:
-        entry_desc = f"回測MA20（{ma20:.0f}）附近撐穩"
-        entry_mid  = float(ma20) * 1.01
+        entry_desc = f"回測MA20（{ma20:.0f}）止跌確認"
+        entry_ref  = round(float(ma20), 1)
 
-    stop     = round(float(support1) * 0.985, 1)
-    target1  = resist1
-    target2  = round(resist1 * 1.08, 1)
-    risk     = entry_mid - stop
-    reward1  = target1 - entry_mid
-    rr       = round(reward1 / risk, 1) if risk > 0 else 0
-    t1_pct   = round((target1 - entry_mid) / entry_mid * 100, 1)
-    t2_pct   = round((target2 - entry_mid) / entry_mid * 100, 1)
+    # 停損：進場參考價 -5%
+    stop    = round(entry_ref * 0.95, 1)
+    target1 = resist1
+    target2 = round(resist1 * 1.08, 1)
+    risk    = entry_ref - stop
+    rr      = round((target1 - entry_ref) / risk, 1) if risk > 0 else 0
 
-    # 風險提示
-    risks = []
+    # 現價判斷
+    dist_to_entry = round((close - entry_ref) / entry_ref * 100, 1)
+    if dist_to_entry > 5:
+        action = f"現價離進場區 +{dist_to_entry}%，等回測再看"
+    elif rr >= 3:
+        action = f"進場區附近，R:R {rr}:1，條件符合"
+    elif rr >= 1.5:
+        action = f"R:R {rr}:1，偏低，等更好位置"
+    else:
+        action = f"R:R {rr}:1，不宜追，等回測"
+
+    # 風險警示
+    warnings = []
     if total_chg_pct > 60:
-        risks.append(f"• 60日漲幅達 {total_chg_pct:.0f}%，絕對高位，倉位控制優先")
+        warnings.append(f"① 60日漲幅 {total_chg_pct:.0f}%，高位風險大")
     if consec_limit >= 2:
-        risks.append(f"• 連 {consec_limit} 日漲停，隔日易開高走低，不追開盤價")
-    risks.append("• 第一筆小倉，等回測確認再加碼")
-    risks.append("• 每次加碼後停損上移（倒金字塔）")
-
-    # SMC 說明
-    ob_desc  = f"機構買盤成本區，回測此區有強撐"
-    fvg_desc = f"今日跳空留下的未填缺口，機構可能回測此區再推升" if has_fvg else "今日無明顯跳空缺口"
-    liq_desc = f"前高 {resist1} 上方聚集大量散戶停損單，是機構下一個掃單目標"
+        warnings.append(f"② 連 {consec_limit} 日漲停，隔日開高走低風險高")
 
     lines = [
-        f"【{label} 技術分析】",
-        f"{today}",
+        f"【{label}】{today}",
+        f"收 {close:.0f}元（{chg_label}）　量 {vol // 1000:,}張",
+        f"MA5 {ma5:.0f}元　MA20 {ma20:.0f}元　MA60 {ma60:.0f}元",
+        f"60日高 {high60:.0f}元　低 {low60:.0f}元",
         "",
-        "【今日數據】",
-        f"收：{close:.0f}（{chg_label}）",
-        f"開：{open_:.1f}　高：{high:.1f}　低：{low:.1f}",
-        f"量：{vol // 1000:,}張",
-        f"MA5：{ma5:.1f}　MA20：{ma20:.1f}　MA60：{ma60:.1f}",
-        f"60日高：{high60:.0f}　低：{low60:.0f}",
-        "",
-        "【形態判讀】",
-        f"{trend}。",
+        f"趨勢：{trend}",
     ]
 
     if consec_limit >= 2:
-        lines.append(f"連 {consec_limit} 日漲停，機構強力推進。")
-    lines.append(f"SMC角度：OB在 {ob_start:.0f}～{ob_end:.0f}（{ob_desc}）。")
-    if has_fvg:
-        lines.append(f"今日跳空留下 {fvg_low}～{fvg_high} FVG缺口（{fvg_desc}）。")
-    lines.append(f"Buy-Side Liquidity 在前高 {resist1}（{liq_desc}）。")
+        lines.append(f"連 {consec_limit} 日漲停，強勢推進中")
 
     lines += [
         "",
-        "【支撐與阻力】",
-        f"強支撐：{support1}（昨收）",
-        f"次支撐：{support2}（OB頂部）",
-        f"壓力：{resist1}（60日前高）",
-        "",
-        "【進場建議（右側）】",
-        f"進場：{entry_desc}",
-        f"停損：跌破 {stop} 收盤出場",
-        f"短線目標：{target1}（+{t1_pct}%）",
-        f"中線目標：{target2}（+{t2_pct}%）",
-        f"R:R ≈ {rr}:1",
-        "",
-        "【風險提示】",
-    ] + risks + [
-        "",
-        "等右側確認再進，停損優先。",
+        "關鍵位：",
+        f"壓力 {resist1}元（前高/BSL）",
+        f"支撐 {support1}元（MA20）　次支撐 {support2}元（OB）",
     ]
+
+    if has_fvg:
+        lines.append(f"FVG缺口 {fvg_low}元～{fvg_high}元（未填）")
+
+    lines += [
+        "",
+        f"進場區：{entry_desc}",
+        f"停損：{stop}元　目標：{target1}元（+{round((target1-entry_ref)/entry_ref*100,1)}%）",
+        f"→ {action}",
+    ]
+
+    if warnings:
+        lines.append("")
+        lines += warnings
 
     return "\n".join(lines)
