@@ -1,4 +1,4 @@
-import os, hashlib, hmac, base64, json
+import os, hashlib, hmac, base64, json, threading
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
@@ -225,9 +225,10 @@ def update_universe():
 
 @app.get("/daily-scan")
 def daily_scan():
-    """手動觸發每日掃描（APScheduler 背景執行，不受 Render worker 回收影響）"""
-    scheduler.add_job(_job_daily_scan, 'date', run_date=datetime.now(), id='manual_scan', replace_existing=True)
-    return {"status": "ok", "message": "掃描已啟動，約 5 分鐘後推播到 LINE"}
+    """手動觸發每日掃描（獨立 thread，不受 Render request 回收影響）"""
+    t = threading.Thread(target=_job_daily_scan, daemon=False)
+    t.start()
+    return {"status": "ok", "message": "掃描已啟動，約 10 分鐘後推播到 LINE"}
 
 
 @app.get("/test-scan")
