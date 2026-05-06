@@ -198,7 +198,7 @@ def cmd_health_check() -> str:
         return "目前無持股資料，無法健檢。"
 
     today = date.today().strftime("%m/%d")
-    CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩"
+    CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
     lines = [f"🏥 持股健檢 {today}"]
     alerts = []
 
