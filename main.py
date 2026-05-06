@@ -256,7 +256,9 @@ def test_scan():
             uptrend = _is_uptrend(stock)
             if uptrend:
                 cnt_uptrend += 1
-            lines.append(f"{s['code']} {s['name']} chg={q['chg_pct']}% vol_ratio={stock['vol_ratio']} uptrend={uptrend}")
+            raw_vol = q.get("volume")
+            hist_vols = df["Volume"].tail(3).tolist() if not df.empty else []
+            lines.append(f"{s['code']} {s['name']} chg={q['chg_pct']}% quote_vol={raw_vol} hist_vol={hist_vols} vol_ratio={stock['vol_ratio']} uptrend={uptrend}")
         except Exception as e:
             lines.append(f"{s['code']} 錯誤：{e}")
     lines.append(f"報價OK:{cnt_quote_ok} K線OK:{cnt_hist_ok} 多頭:{cnt_uptrend}")
