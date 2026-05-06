@@ -1,9 +1,12 @@
+import gc
 import json
 import os
+import time
 import requests
 import pandas as pd
 from datetime import date, datetime
 from fugle_fetcher import fetch_quote, fetch_quotes_bulk
+from fugle_fetcher import fetch_history as fugle_history
 from twse_fetcher import fetch as fetch_history
 
 
@@ -184,4 +187,108 @@ def cmd_daily_scan() -> str:
             lines.append(f"  {s['name']}（{s['code']}）{s['close']:.0f} +{s['chg']:.1f}%")
 
     lines.append(f"\n共 {len(strong)} 檔列入觀察清單")
+    return "\n".join(lines)
+
+
+def cmd_health_check() -> str:
+    """每日持股健檢：損益、距停損、技術訊號"""
+    data = _load_watchlist()
+    holdings = data.get("holdings", [])
+    if not holdings:
+        return "目前無持股資料，無法健檢。"
+
+    today = date.today().strftime("%m/%d")
+    CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩"
+    lines = [f"🏥 持股健檢 {today}"]
+    alerts = []
+
+    for i, h in enumerate(holdings):
+        time.sleep(1)
+        code  = h["code"]
+        name  = h["name"]
+        cost  = h.get("cost", 0)
+        stop  = h.get("stop", 0)
+
+        q = fetch_quote(code)
+        if not q or q.get("close") is None:
+            lines.append(f"\n{CIRCLE[i]} {name} ({code})\n  ⚠️ 無法取得報價")
+            continue
+
+        price   = q["close"]
+        chg_pct = q.get("chg_pct", 0) or 0
+        pnl_pct = round((price - cost) / cost * 100, 1) if cost > 0 else 0
+        to_stop = round((price - stop) / price * 100, 1) if stop > 0 else None
+
+        # 損益符號
+        pnl_str  = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+        chg_str  = f"+{chg_pct:.1f}%" if chg_pct >= 0 else f"{chg_pct:.1f}%"
+        stop_str = f"距停損 {to_stop:.1f}%" if to_stop is not None else "無停損"
+
+        # 技術分析
+        df = fugle_history(code, days=30)
+        ma5 = ma20 = None
+        vol_ratio = None
+        tech_tag = ""
+
+        if not df.empty and len(df) >= 20:
+            df["MA5"]  = df["Close"].rolling(5).mean()
+            df["MA20"] = df["Close"].rolling(20).mean()
+            last = df.iloc[-1]
+            ma5  = float(last["MA5"])  if not pd.isna(last["MA5"])  else None
+            ma20 = float(last["MA20"]) if not pd.isna(last["MA20"]) else None
+
+            # 量比
+            vol_today = q.get("volume") or 0
+            if vol_today == 0:
+                vol_today = int(df["Volume"].iloc[-1])
+            avg_vol = df["Volume"].iloc[-21:-1].mean()
+            vol_ratio = round(vol_today / avg_vol, 1) if avg_vol > 0 else None
+
+            del df
+            gc.collect()
+
+        # 訊號判斷
+        signals = []
+        if to_stop is not None and price < stop:
+            signals.append("🔴 已跌破停損")
+            alerts.append(f"{name}({code}) 已跌破停損 {stop:.1f}")
+        elif to_stop is not None and to_stop < 3:
+            signals.append("🟡 接近停損")
+            alerts.append(f"{name}({code}) 距停損僅 {to_stop:.1f}%")
+
+        if chg_pct <= -3:
+            if vol_ratio and vol_ratio >= 1.5:
+                signals.append("⚠️ 爆量長黑（出貨訊號）")
+            else:
+                signals.append("⚠️ 今日大跌")
+
+        if ma5 and ma20:
+            if price < ma20:
+                signals.append("📉 跌破 MA20")
+            elif ma5 < ma20:
+                signals.append("📉 MA5 < MA20（動能轉弱）")
+
+        if not signals:
+            signals.append("✅ 正常")
+
+        vol_str  = f"量比 {vol_ratio}x" if vol_ratio else ""
+        ma_str   = f"MA5 {ma5:.0f} / MA20 {ma20:.0f}" if ma5 and ma20 else ""
+        tech_str = " / ".join(filter(None, [vol_str, ma_str]))
+
+        block = (
+            f"\n{CIRCLE[i]} {name} ({code})\n"
+            f"現價 {price:.0f} 元（{chg_str}）/ 成本 {cost:.0f} 元 / 損益 {pnl_str}\n"
+            f"{stop_str}"
+        )
+        if tech_str:
+            block += f"\n{tech_str}"
+        block += f"\n{' / '.join(signals)}"
+        lines.append(block)
+
+    # 彙總警示
+    if alerts:
+        lines.append("\n⚠️ 需要注意")
+        for a in alerts:
+            lines.append(f"• {a}")
+
     return "\n".join(lines)

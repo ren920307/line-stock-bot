@@ -8,7 +8,7 @@ from analyzer import analyze
 from twse_fetcher import fetch
 from claude_analyzer import deep_analyze
 from stock_names import resolve, get_name
-from commands import cmd_market, cmd_holdings, cmd_scan
+from commands import cmd_market, cmd_holdings, cmd_scan, cmd_health_check
 from market_scanner import run_daily_scan
 from universe_builder import build_universe
 from weekly_report import build_weekly_report
@@ -46,13 +46,23 @@ def _job_weekly_report():
     except Exception as e:
         push(f"❌ 週報失敗：{e}")
 
+def _job_health_check():
+    try:
+        result = cmd_health_check()
+        push(result)
+    except Exception as e:
+        import traceback
+        push(f"❌ 健檢失敗：{e}\n{traceback.format_exc()[-200:]}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     tz = pytz.timezone("Asia/Taipei")
     # 每天 09:00 更新宇宙清單（週一到週五）
     scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz))
-    # 每天 15:25 開始掃描（約 5 分鐘後推播）
+    # 每天 15:25 開始掃描（約 10 分鐘後推播）
     scheduler.add_job(_job_daily_scan, CronTrigger(hour=15, minute=25, day_of_week="mon-fri", timezone=tz))
+    # 每天 15:30 持股健檢
+    scheduler.add_job(_job_health_check, CronTrigger(hour=15, minute=30, day_of_week="mon-fri", timezone=tz))
     # 每週五 15:35 推週績效
     scheduler.add_job(_job_weekly_report, CronTrigger(hour=15, minute=35, day_of_week="fri", timezone=tz))
     scheduler.start()
@@ -229,6 +239,14 @@ def daily_scan():
     t = threading.Thread(target=_job_daily_scan, daemon=False)
     t.start()
     return {"status": "ok", "message": "掃描已啟動，約 10 分鐘後推播到 LINE"}
+
+
+@app.get("/health-check")
+def health_check_route():
+    """手動觸發持股健檢"""
+    t = threading.Thread(target=_job_health_check, daemon=False)
+    t.start()
+    return {"status": "ok", "message": "健檢已啟動，約 2 分鐘後推播到 LINE"}
 
 
 @app.get("/test-scan")
