@@ -226,6 +226,45 @@ def daily_scan(background_tasks: BackgroundTasks):
     return {"status": "ok", "message": "掃描已啟動，約 5 分鐘後推播到 LINE"}
 
 
+@app.get("/test-scan")
+def test_scan():
+    """測試用：只跑前20檔，同步回傳結果"""
+    from market_scanner import _load_universe, _enrich, _is_uptrend, MOMENTUM_MIN_CHG, MOMENTUM_MIN_VOL, PULLBACK_MIN_CHG, PULLBACK_MAX_CHG, PULLBACK_MAX_VOL
+    from fugle_fetcher import fetch_history, fetch_quote
+    import time, gc
+    universe = _load_universe()[:20]
+    lines = [f"測試掃描（前20檔）"]
+    cnt_quote_ok = cnt_hist_ok = cnt_uptrend = 0
+    for s in universe:
+        try:
+            time.sleep(0.5)
+            q = fetch_quote(s["code"])
+            if not q or q.get("chg_pct") is None or q.get("close") is None:
+                continue
+            cnt_quote_ok += 1
+            df = fetch_history(s["code"], days=70)
+            if df.empty or len(df) < 25:
+                del df
+                continue
+            cnt_hist_ok += 1
+            volume = (q.get("volume") or 0) // 1000
+            if volume == 0 and not df.empty:
+                volume = int(df["Volume"].iloc[-1])
+            stock = {"code": s["code"], "name": s["name"], "close": q["close"], "chg_pct": q["chg_pct"], "volume": volume}
+            stock = _enrich(stock, df)
+            del df; gc.collect()
+            uptrend = _is_uptrend(stock)
+            if uptrend:
+                cnt_uptrend += 1
+            lines.append(f"{s['code']} {s['name']} chg={q['chg_pct']}% vol_ratio={stock['vol_ratio']} uptrend={uptrend}")
+        except Exception as e:
+            lines.append(f"{s['code']} 錯誤：{e}")
+    lines.append(f"報價OK:{cnt_quote_ok} K線OK:{cnt_hist_ok} 多頭:{cnt_uptrend}")
+    result = "\n".join(lines)
+    push(result)
+    return {"status": "ok", "result": result}
+
+
 @app.get("/scan-result")
 def scan_result():
     try:
