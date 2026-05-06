@@ -238,61 +238,67 @@ def run_daily_scan() -> str:
     today  = date.today().strftime("%m/%d")
 
     def fmt_momentum(i, s):
-        high_tag = " ⚠近前高" if s["near_high"] else ""
+        high_tag = " (⚠近前高)" if s["near_high"] else ""
+        chg_str  = f"漲 +{s['chg_pct']:.1f}%"
+        fib_str  = s['fib_pos'].replace("～", " ~ ")
         return (
-            f"{CIRCLE[i-1]} {s['name']}({s['code']})"
-            f" {s['close']:.0f}元 +{s['chg_pct']:.1f}%"
-            f" 量比{s['vol_ratio']:.1f}x"
-            f" {s['fib_pos']}{high_tag}"
+            f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
+            f"{s['close']:.0f} 元 / {chg_str} / 量比 {s['vol_ratio']:.1f}x / {fib_str}{high_tag}"
         )
 
     def fmt_pullback(i, s):
-        dist_str = f"MA20{'↑' if s['dist_ma20'] >= 0 else '↓'}{abs(s['dist_ma20']):.1f}%"
+        if s['chg_pct'] > 0:
+            chg_str = f"漲 +{s['chg_pct']:.1f}%"
+        elif s['chg_pct'] < 0:
+            chg_str = f"跌 {s['chg_pct']:.1f}%"
+        else:
+            chg_str = "平盤 +0.0%"
+        ma_dir  = "向上" if s['dist_ma20'] >= 0 else "向下"
+        fib_str = s['fib_pos'].replace("～", " ~ ")
         return (
-            f"{CIRCLE[i-1]} {s['name']}({s['code']})"
-            f" {s['close']:.0f}元 {s['chg_pct']:+.1f}%"
-            f" 量比{s['vol_ratio']:.1f}x"
-            f" {dist_str} {s['fib_pos']}"
+            f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
+            f"{s['close']:.0f} 元 / {chg_str} / 量比 {s['vol_ratio']:.1f}x / MA20 {ma_dir} {abs(s['dist_ma20']):.1f}% / {fib_str}"
         )
 
-    lines = [f"【強勢股掃描】{today}"]
+    lines = [f"【強勢股掃描】 {today}"]
 
     # 強勢追價組
     lines.append("")
     if top_m:
-        lines.append(f"★ 強勢追價 TOP{len(top_m)}（今日動能強，明日等回測）★")
-        lines.append("條件：漲>4% / 量比>2.5x / MA多頭")
+        lines.append(f"🔥 強勢追價 TOP {len(top_m)}")
+        lines.append("條件：漲幅 > 4% / 量比 > 2.0x / MA 多頭")
+        lines.append("策略：今日動能強，明日等回測")
         for i, s in enumerate(top_m, 1):
             lines.append(fmt_momentum(i, s))
     else:
-        lines.append("★ 強勢追價：今日無符合標的")
+        lines.append("🔥 強勢追價：今日無符合標的")
 
     # 回測進場組
     lines.append("")
     if top_p:
-        lines.append(f"★ 回測進場 TOP{len(top_p)}（縮量回測，位置佳）★")
-        lines.append("條件：近5日曾漲>4% / 今日縮量 / 距MA20在5%內")
+        lines.append(f"📉 回測進場 TOP {len(top_p)}")
+        lines.append("條件：近 5 日曾漲 > 3.5% / 今日縮量 / 距 MA20 在 8% 內")
+        lines.append("策略：縮量回測，位置佳")
         for i, s in enumerate(top_p, 1):
             lines.append(fmt_pullback(i, s))
     else:
-        lines.append("★ 回測進場：今日無符合標的")
+        lines.append("📉 回測進場：今日無符合標的")
 
     # 操作提示
     lines.append(
-        "\n【操作提示】\n"
-        "① 追價組：明日回測今日收盤不破才進，停損跌破今日低點\n"
-        "② 回測組：今日或明日止跌K確認（紅K或下影線）才進\n"
-        "③ 兩組停損均設支撐下方，R:R用TP2計算需≥1:3\n"
-        "④ 首倉小，確認後倒金字塔加碼"
+        "\n💡 操作提示\n"
+        "• 追價組：明日回測且今日收盤價不破才進場，停損設跌破今日低點。\n"
+        "• 回測組：今日或明日確認出現止跌 K 線（紅 K 或下影線）才進場。\n"
+        "• 風險控管：兩組停損均設在支撐下方，R:R 用 TP2 計算需 ≥ 1:3。\n"
+        "• 部位管理：首倉小，確認趨勢後再以倒金字塔加碼。"
     )
 
     lines.append(
-        f"\n【掃描診斷】總計{cnt_total}檔"
-        f" / 報價OK:{cnt_quote_ok}"
-        f" / K線OK:{cnt_hist_ok}"
-        f" / 多頭排列:{cnt_uptrend}"
-        f" / 追價過關:{cnt_momentum}"
-        f" / 回測過關:{cnt_pullback}"
+        f"\n📊 掃描診斷\n"
+        f"總計 {cnt_total} 檔 / 報價 K 線正常 {min(cnt_quote_ok, cnt_hist_ok)} 檔"
+        f" / MA 多頭 {cnt_uptrend} 檔"
+        f" / 追價過關 {cnt_momentum} 檔"
+        f" / 回測過關 {cnt_pullback} 檔"
     )
 
     return "\n".join(lines)
