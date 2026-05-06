@@ -95,8 +95,8 @@ def analyze(code: str, name: str = "") -> str:
     support1 = round(float(ma20), 1)     # MA20 = 主要支撐
     support2 = round(float(ob_end), 1)   # OB頂 = 次要支撐
 
-    # 進場區：FVG優先，否則MA20
-    if has_fvg:
+    # 進場區：FVG在現價上方才有意義，否則用MA20
+    if has_fvg and fvg_low > close:
         entry_desc = f"回測FVG（{fvg_low}～{fvg_high}）止跌確認"
         entry_ref  = round((fvg_low + fvg_high) / 2, 1)
     else:
@@ -124,9 +124,9 @@ def analyze(code: str, name: str = "") -> str:
     # 風險警示
     warnings = []
     if total_chg_pct > 60:
-        warnings.append(f"① 60日漲幅 {total_chg_pct:.0f}%，高位風險大")
+        warnings.append(f"⚠ 60日漲幅 {total_chg_pct:.0f}%，高位風險大")
     if consec_limit >= 2:
-        warnings.append(f"② 連 {consec_limit} 日漲停，隔日開高走低風險高")
+        warnings.append(f"⚠ 連 {consec_limit} 日漲停，隔日開高走低風險高")
 
     lines = [
         f"【{label}】{today}",
