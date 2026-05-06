@@ -247,17 +247,15 @@ def test_scan():
                 del df
                 continue
             cnt_hist_ok += 1
-            volume = q.get("volume") or 0
-            if volume == 0 and not df.empty:
-                volume = int(df["Volume"].iloc[-1])
+            raw_vol = q.get("volume") or 0
+            hist_vols = df["Volume"].tail(3).tolist()
+            volume = raw_vol if raw_vol > 0 else int(df["Volume"].iloc[-1])
             stock = {"code": s["code"], "name": s["name"], "close": q["close"], "chg_pct": q["chg_pct"], "volume": volume}
             stock = _enrich(stock, df)
             del df; gc.collect()
             uptrend = _is_uptrend(stock)
             if uptrend:
                 cnt_uptrend += 1
-            raw_vol = q.get("volume")
-            hist_vols = df["Volume"].tail(3).tolist() if not df.empty else []
             lines.append(f"{s['code']} {s['name']} chg={q['chg_pct']}% quote_vol={raw_vol} hist_vol={hist_vols} vol_ratio={stock['vol_ratio']} uptrend={uptrend}")
         except Exception as e:
             lines.append(f"{s['code']} 錯誤：{e}")
