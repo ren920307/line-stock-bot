@@ -224,11 +224,13 @@ def cmd_health_check() -> str:
         chg_str  = f"+{chg_pct:.1f}%" if chg_pct >= 0 else f"{chg_pct:.1f}%"
         stop_str = f"距停損 {to_stop:.1f}%" if to_stop is not None else "無停損"
 
-        # 技術分析
-        df = fugle_history(code, days=30)
+        # 技術分析（抓 65 日，含費波計算）
+        df = fugle_history(code, days=65)
         ma5 = ma20 = None
         vol_ratio = None
-        tech_tag = ""
+        tp2 = None
+        near_ma5 = False
+        stop_k = False
 
         if not df.empty and len(df) >= 20:
             df["MA5"]  = df["Close"].rolling(5).mean()
@@ -243,6 +245,21 @@ def cmd_health_check() -> str:
                 vol_today = int(df["Volume"].iloc[-1])
             avg_vol = df["Volume"].iloc[-21:-1].mean()
             vol_ratio = round(vol_today / avg_vol, 1) if avg_vol > 0 else None
+
+            # 費波 1.618 目標（60 日低→高）
+            low60  = float(df["Low"].tail(60).min())
+            high60 = float(df["High"].tail(60).max())
+            tp2 = round(low60 + (high60 - low60) * 1.618, 1)
+
+            # 加碼條件：回測 MA5（現價在 MA5 ±2% 內）
+            if ma5 and price <= ma5 * 1.02:
+                near_ma5 = True
+
+            # 止跌 K：收紅（今日漲）或下影線（low 比 close 低 1% 以上）
+            low_today  = q.get("low")  or price
+            open_today = q.get("open") or price
+            if chg_pct >= 0 or (price - low_today) / price >= 0.01:
+                stop_k = True
 
             del df
             gc.collect()
@@ -268,12 +285,21 @@ def cmd_health_check() -> str:
             elif ma5 < ma20:
                 signals.append("📉 MA5 < MA20（動能轉弱）")
 
+        # 加碼提醒：獲利≥5% + 量縮 + 回測MA5 + 止跌K
+        if (pnl_pct >= 5 and
+                vol_ratio and vol_ratio <= 1.2 and
+                near_ma5 and stop_k):
+            tp2_str = f"TP2 約 {tp2:.0f} 元" if tp2 else ""
+            signals.append(f"🔼 加碼觀察：{tp2_str}")
+            alerts.append(f"{name}({code}) 可評估加碼，{tp2_str}")
+
         if not signals:
             signals.append("✅ 正常")
 
         vol_str  = f"量比 {vol_ratio}x" if vol_ratio else ""
         ma_str   = f"MA5 {ma5:.0f} / MA20 {ma20:.0f}" if ma5 and ma20 else ""
-        tech_str = " / ".join(filter(None, [vol_str, ma_str]))
+        tp2_str  = f"TP2 {tp2:.0f}" if tp2 else ""
+        tech_str = " / ".join(filter(None, [vol_str, ma_str, tp2_str]))
 
         block = (
             f"\n{CIRCLE[i]} {name} ({code})\n"
