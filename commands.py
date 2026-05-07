@@ -191,7 +191,7 @@ def cmd_daily_scan() -> str:
 
 
 def cmd_health_check() -> str:
-    """每日持股健檢：損益、距停損、技術訊號"""
+    """每日持股健檢：損益、距停損、技術訊號，並自動更新動態停損"""
     data = _load_watchlist()
     holdings = data.get("holdings", [])
     if not holdings:
@@ -201,13 +201,14 @@ def cmd_health_check() -> str:
     CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
     lines = [f"🏥 持股健檢 {today}"]
     alerts = []
+    stop_updates = []   # 記錄本次移停變動
 
     for i, h in enumerate(holdings):
         time.sleep(1)
         code  = h["code"]
         name  = h["name"]
         cost  = h.get("cost", 0)
-        stop  = h.get("stop", 0)
+        stop  = h.get("stop") or 0
 
         q = fetch_quote(code)
         if not q or q.get("close") is None:
@@ -264,11 +265,23 @@ def cmd_health_check() -> str:
             del df
             gc.collect()
 
-        # ── 移動停損建議 ──
-        # 規則：獲利 > 5% 且 MA20 > 現有停損，建議移停到 MA20*0.97
-        trailing_suggest = None
-        if ma20 and pnl_pct >= 5 and stop and round(ma20 * 0.97, 1) > stop:
-            trailing_suggest = round(ma20 * 0.97, 1)
+        # ── 動態停損（方向B：每天自動更新，只往上走）──
+        # 規則：新停損 = max(現有停損, MA20 × 0.97)
+        # 硬底板：不低於成本 × 0.85（最多虧 15%）
+        new_stop = stop
+        if ma20:
+            candidate = round(ma20 * 0.97, 1)
+            hard_floor = round(cost * 0.85, 1) if cost > 0 else 0
+            new_stop = max(stop, candidate, hard_floor)
+
+        if new_stop != stop and new_stop > 0:
+            h["stop"] = new_stop          # 更新 dict（稍後一次寫回 JSON）
+            stop_updates.append(f"{name}({code}) {stop:.1f} → {new_stop:.1f}")
+            stop = new_stop               # 本次健檢用新停損
+
+        # 重新算距停損（停損已更新）
+        to_stop = round((price - stop) / price * 100, 1) if stop > 0 else None
+        stop_str = f"距停損 {to_stop:.1f}%" if to_stop is not None else "無停損"
 
         # ── 訊號判斷 ──
         signals = []
@@ -311,10 +324,7 @@ def cmd_health_check() -> str:
             signals.append(f"🔼 加碼觀察 / {tp2_hint}" if tp2_hint else "🔼 加碼觀察")
             alerts.append(f"🔼 {name}({code}) 符合加碼條件（獲利{pnl_pct:.1f}%，縮量回測MA5）")
 
-        # 移動停損提醒
-        if trailing_suggest:
-            signals.append(f"📌 建議移停 → {trailing_suggest}（MA20×0.97）")
-            alerts.append(f"📌 {name}({code}) 建議移停：{stop:.1f} → {trailing_suggest}")
+        # 移動停損已自動執行，不需在這裡提醒
 
         if not signals:
             signals.append("✅ 正常")
@@ -335,15 +345,20 @@ def cmd_health_check() -> str:
             block += f"\n{sig}"
         lines.append(block)
 
+    # ── 自動移停：寫回 watchlist.json ──
+    if stop_updates:
+        _save_watchlist(data)
+        lines.append("\n📌 停損已自動更新（MA20×0.97）")
+        for u in stop_updates:
+            lines.append(f"• {u}")
+
     # ── 今日行動清單 ──
     if alerts:
         lines.append("\n📋 今日行動清單")
-        # 分類顯示
-        exit_alerts    = [a for a in alerts if a.startswith("🔴") or a.startswith("🟠")]
-        add_alerts     = [a for a in alerts if a.startswith("🔼")]
-        trailing_alerts= [a for a in alerts if a.startswith("📌")]
-        target_alerts  = [a for a in alerts if a.startswith("🎯")]
-        for a in exit_alerts + target_alerts + add_alerts + trailing_alerts:
+        exit_alerts   = [a for a in alerts if a.startswith("🔴") or a.startswith("🟠")]
+        target_alerts = [a for a in alerts if a.startswith("🎯")]
+        add_alerts    = [a for a in alerts if a.startswith("🔼")]
+        for a in exit_alerts + target_alerts + add_alerts:
             lines.append(f"• {a}")
 
     return "\n".join(lines)
