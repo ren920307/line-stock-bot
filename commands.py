@@ -252,8 +252,8 @@ def cmd_health_check() -> str:
             high60 = float(df["High"].tail(60).max())
             tp2 = round(low60 + (high60 - low60) * 1.618, 1)
 
-            # 加碼條件：回測 MA5（現價距 MA5 在 ±2% 內）
-            if ma5 and abs(price - ma5) / ma5 <= 0.02:
+            # 加碼條件：回測 MA5（現價距 MA5 在 ±3% 內）
+            if ma5 and abs(price - ma5) / ma5 <= 0.03:
                 near_ma5 = True
 
             # 止跌 K：收紅（今日漲）或下影線（low 比 close 低 1% 以上）
@@ -328,13 +328,19 @@ def cmd_health_check() -> str:
 
         vol_str  = f"量比 {vol_ratio}x" if vol_ratio else ""
         ma_str   = f"MA5 {ma5:.0f} / MA20 {ma20:.0f}" if ma5 and ma20 else ""
-        tp2_str  = f"TP2 {tp2:.0f}" if tp2 else ""
-        tech_str = " / ".join(filter(None, [vol_str, ma_str, tp2_str]))
+        tech_str = " / ".join(filter(None, [vol_str, ma_str]))
+
+        # 停利行（有獲利才顯示）
+        tp2_line = ""
+        if tp2 and pnl_pct > 0:
+            dist_tp2 = round((tp2 - price) / price * 100, 1)
+            tp2_line = f"\n停利 {tp2:.0f} / 距停利 {dist_tp2:.1f}%"
 
         block = (
             f"\n{CIRCLE[i]} {name} ({code})\n"
             f"現價 {price:.0f} 元（{chg_str}）/ 成本 {cost:.0f} 元 / 損益 {pnl_str}\n"
             f"{stop_str}"
+            f"{tp2_line}"
         )
         if tech_str:
             block += f"\n{tech_str}"
