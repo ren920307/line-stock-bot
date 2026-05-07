@@ -250,26 +250,34 @@ def run_daily_scan() -> str:
     today  = date.today().strftime("%m/%d")
 
     def fmt_momentum(i, s):
-        high_tag = " (⚠近前高)" if s["near_high"] else ""
-        chg_str  = f"漲 +{s['chg_pct']:.1f}%"
-        fib_str  = s['fib_pos'].replace("～", " ~ ")
+        chg_str  = f"+{s['chg_pct']:.1f}%"
+        fib_str  = s['fib_pos']
+        high_tag = "⚠️ 近前高，留意壓力" if s["near_high"] else "✅ 強勢突破"
+        ma20 = int(s['ma20']) if s['ma20'] else "-"
+        ma60 = int(s['ma60']) if s['ma60'] else "-"
         return (
             f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
-            f"{s['close']:.0f} 元 / {chg_str} / 量比 {s['vol_ratio']:.1f}x / {fib_str}{high_tag}"
+            f"現價 {s['close']:.0f} 元（{chg_str}）/ 量比 {s['vol_ratio']:.1f}x\n"
+            f"MA20 {ma20} / MA60 {ma60} / {fib_str}\n"
+            f"{high_tag}"
         )
 
     def fmt_pullback(i, s):
         if s['chg_pct'] > 0:
-            chg_str = f"漲 +{s['chg_pct']:.1f}%"
+            chg_str = f"+{s['chg_pct']:.1f}%"
         elif s['chg_pct'] < 0:
-            chg_str = f"跌 {s['chg_pct']:.1f}%"
+            chg_str = f"{s['chg_pct']:.1f}%"
         else:
-            chg_str = "平盤 +0.0%"
-        ma_dir  = "向上" if s['dist_ma20'] >= 0 else "向下"
-        fib_str = s['fib_pos'].replace("～", " ~ ")
+            chg_str = "0.0%"
+        ma_dir  = "站上" if s['dist_ma20'] >= 0 else "跌破"
+        fib_str = s['fib_pos']
+        ma20 = int(s['ma20']) if s['ma20'] else "-"
+        ma60 = int(s['ma60']) if s['ma60'] else "-"
         return (
             f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
-            f"{s['close']:.0f} 元 / {chg_str} / 量比 {s['vol_ratio']:.1f}x / MA20 {ma_dir} {abs(s['dist_ma20']):.1f}% / {fib_str}"
+            f"現價 {s['close']:.0f} 元（{chg_str}）/ 量比 {s['vol_ratio']:.1f}x\n"
+            f"MA20 {ma20}（{ma_dir} {abs(s['dist_ma20']):.1f}%）/ MA60 {ma60}\n"
+            f"📍 {fib_str}"
         )
 
     lines = [f"【強勢股掃描】 {today}"]
@@ -299,10 +307,8 @@ def run_daily_scan() -> str:
     # 操作提示
     lines.append(
         "\n💡 操作提示\n"
-        "• 追價組：明日回測且今日收盤價不破才進場，停損設跌破今日低點。\n"
-        "• 回測組：今日或明日確認出現止跌 K 線（紅 K 或下影線）才進場。\n"
-        "• 風險控管：兩組停損均設在支撐下方，R:R 用 TP2 計算需 ≥ 1:3。\n"
-        "• 部位管理：首倉小，確認趨勢後再以倒金字塔加碼。"
+        "追價組：明日回測不破今日低才進，停損設今日低點下方。\n"
+        "回測組：確認止跌 K（紅 K / 下影線）再進，R:R ≥ 1:3。"
     )
 
     lines.append(
