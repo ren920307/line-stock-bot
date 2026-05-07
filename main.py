@@ -79,13 +79,11 @@ async def lifespan(app: FastAPI):
     # 每 10 分鐘 keepalive，避免 Render 免費方案休眠
     scheduler.add_job(_job_keepalive, 'interval', minutes=10)
     # 每天 09:00 更新宇宙清單（週一到週五）
-    scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz))
-    # 每天 15:25 開始掃描（約 10 分鐘後推播）
-    scheduler.add_job(_job_daily_scan, CronTrigger(hour=15, minute=25, day_of_week="mon-fri", timezone=tz))
-    # 每天 16:00 持股健檢（避開掃描 API 配額衝突）
-    scheduler.add_job(_job_health_check, CronTrigger(hour=16, minute=0, day_of_week="mon-fri", timezone=tz))
-    # 每週五 15:35 推週績效
-    scheduler.add_job(_job_weekly_report, CronTrigger(hour=15, minute=35, day_of_week="fri", timezone=tz))
+    # misfire_grace_time=60：排程超過 60 秒沒跑到（如部署重啟）就直接跳過，不補跑
+    scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
+    scheduler.add_job(_job_daily_scan,      CronTrigger(hour=15, minute=25, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
+    scheduler.add_job(_job_health_check,    CronTrigger(hour=16, minute=0, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
+    scheduler.add_job(_job_weekly_report,   CronTrigger(hour=15, minute=35, day_of_week="fri", timezone=tz), misfire_grace_time=60)
     scheduler.start()
     yield
     scheduler.shutdown()
