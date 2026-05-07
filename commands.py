@@ -264,34 +264,57 @@ def cmd_health_check() -> str:
             del df
             gc.collect()
 
-        # 訊號判斷
-        signals = []
-        if to_stop is not None and price < stop:
-            signals.append("🔴 已跌破停損")
-            alerts.append(f"{name}({code}) 已跌破停損 {stop:.1f}")
-        elif to_stop is not None and to_stop < 3:
-            signals.append("🟡 接近停損")
-            alerts.append(f"{name}({code}) 距停損僅 {to_stop:.1f}%")
+        # ── 移動停損建議 ──
+        # 規則：獲利 > 5% 且 MA20 > 現有停損，建議移停到 MA20*0.97
+        trailing_suggest = None
+        if ma20 and pnl_pct >= 5 and stop and round(ma20 * 0.97, 1) > stop:
+            trailing_suggest = round(ma20 * 0.97, 1)
 
-        if chg_pct <= -3:
+        # ── 訊號判斷 ──
+        signals = []
+
+        # 出場訊號（優先序）
+        if to_stop is not None and price <= stop:
+            signals.append("🔴 跌破停損，考慮出場")
+            alerts.append(f"🔴 {name}({code}) 已跌破停損 {stop:.1f}，考慮出場")
+        elif to_stop is not None and to_stop < 3:
+            signals.append(f"🟠 接近停損（剩 {to_stop:.1f}%）")
+            alerts.append(f"🟠 {name}({code}) 距停損僅 {to_stop:.1f}%")
+        elif ma20 and price < ma20:
+            signals.append("🟠 跌破 MA20，考慮出場")
+            alerts.append(f"🟠 {name}({code}) 跌破 MA20（{ma20:.0f}）")
+
+        # 動能轉弱
+        if ma5 and ma20 and ma5 < ma20 and price >= ma20:
+            signals.append("⚠️ MA5 < MA20，動能轉弱")
+
+        # 今日 K 棒異常
+        if chg_pct <= -5:
             if vol_ratio and vol_ratio >= 1.5:
                 signals.append("⚠️ 爆量長黑（出貨訊號）")
             else:
-                signals.append("⚠️ 今日大跌")
+                signals.append("⚠️ 今日大跌 -5%↓")
+        elif chg_pct <= -3:
+            signals.append("⚠️ 今日大跌")
 
-        if ma5 and ma20:
-            if price < ma20:
-                signals.append("📉 跌破 MA20")
-            elif ma5 < ma20:
-                signals.append("📉 MA5 < MA20（動能轉弱）")
+        # 接近目標 TP2
+        if tp2 and price >= tp2 * 0.95:
+            signals.append(f"🎯 接近 TP2（{tp2:.0f}），考慮分批出場")
+            alerts.append(f"🎯 {name}({code}) 已達 TP2 {tp2:.0f} 的 95%，考慮出場")
 
-        # 加碼提醒：獲利≥5% + 量縮 + 回測MA5 + 止跌K
+        # 加碼提醒：獲利≥5% + 量縮≤1.2 + 回測MA5±2% + 止跌K
         if (pnl_pct >= 5 and
                 vol_ratio and vol_ratio <= 1.2 and
-                near_ma5 and stop_k):
-            tp2_str = f"TP2 約 {tp2:.0f} 元" if tp2 else ""
-            signals.append(f"🔼 加碼觀察：{tp2_str}")
-            alerts.append(f"{name}({code}) 可評估加碼，{tp2_str}")
+                near_ma5 and stop_k and
+                not any("出場" in s or "停損" in s for s in signals)):
+            tp2_hint = f"目標 TP2 {tp2:.0f}" if tp2 else ""
+            signals.append(f"🔼 加碼觀察 / {tp2_hint}" if tp2_hint else "🔼 加碼觀察")
+            alerts.append(f"🔼 {name}({code}) 符合加碼條件（獲利{pnl_pct:.1f}%，縮量回測MA5）")
+
+        # 移動停損提醒
+        if trailing_suggest:
+            signals.append(f"📌 建議移停 → {trailing_suggest}（MA20×0.97）")
+            alerts.append(f"📌 {name}({code}) 建議移停：{stop:.1f} → {trailing_suggest}")
 
         if not signals:
             signals.append("✅ 正常")
@@ -308,13 +331,19 @@ def cmd_health_check() -> str:
         )
         if tech_str:
             block += f"\n{tech_str}"
-        block += f"\n{' / '.join(signals)}"
+        for sig in signals:
+            block += f"\n{sig}"
         lines.append(block)
 
-    # 彙總警示
+    # ── 今日行動清單 ──
     if alerts:
-        lines.append("\n⚠️ 需要注意")
-        for a in alerts:
+        lines.append("\n📋 今日行動清單")
+        # 分類顯示
+        exit_alerts    = [a for a in alerts if a.startswith("🔴") or a.startswith("🟠")]
+        add_alerts     = [a for a in alerts if a.startswith("🔼")]
+        trailing_alerts= [a for a in alerts if a.startswith("📌")]
+        target_alerts  = [a for a in alerts if a.startswith("🎯")]
+        for a in exit_alerts + target_alerts + add_alerts + trailing_alerts:
             lines.append(f"• {a}")
 
     return "\n".join(lines)
