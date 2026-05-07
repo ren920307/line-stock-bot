@@ -193,7 +193,7 @@ def cmd_daily_scan() -> str:
 def cmd_health_check() -> str:
     """每日持股健檢：損益、距停損、技術訊號，並自動更新動態停損"""
     data = _load_watchlist()
-    holdings = data.get("holdings", [])
+    holdings = [h for h in data.get("holdings", []) if not h.get("_archived")]
     if not holdings:
         return "目前無持股資料，無法健檢。"
 
