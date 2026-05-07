@@ -23,7 +23,8 @@ MY_USER_ID   = os.environ["LINE_USER_ID"]
 GROUP_ID_FILE = "group_ids.json"
 
 scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Taipei"))
-_scan_lock = threading.Lock()  # 防止掃描並發執行
+_scan_lock   = threading.Lock()  # 防止掃描並發執行
+_health_lock = threading.Lock()  # 防止健檢並發執行
 
 def _job_update_universe():
     try:
@@ -53,12 +54,17 @@ def _job_weekly_report():
         push(f"❌ 週報失敗：{e}")
 
 def _job_health_check():
+    if not _health_lock.acquire(blocking=False):
+        push("⚠️ 健檢已在執行中，略過重複觸發。")
+        return
     try:
         result = cmd_health_check()
         push(result)
     except Exception as e:
         import traceback
         push(f"❌ 健檢失敗：{e}\n{traceback.format_exc()[-200:]}")
+    finally:
+        _health_lock.release()
 
 def _job_keepalive():
     """每 10 分鐘打自己一次，避免 Render 免費方案休眠"""
