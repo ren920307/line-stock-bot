@@ -265,31 +265,35 @@ def cmd_health_check() -> str:
             del df
             gc.collect()
 
-        # ── 動態停損（方向B：每天自動更新，只往上走）──
-        # 規則：新停損 = max(現有停損, MA20 × 0.97)
-        # 硬底板：不低於成本 × 0.85（最多虧 15%）
-        new_stop = stop
+        # ── 動態停損（每天自動更新，只往上走）──
+        stop_moved = False
+        old_stop = stop
         if ma20:
-            candidate = round(ma20 * 0.97, 1)
+            candidate  = round(ma20 * 0.97, 1)
             hard_floor = round(cost * 0.85, 1) if cost > 0 else 0
-            new_stop = max(stop, candidate, hard_floor)
+            new_stop   = max(stop, candidate, hard_floor)
+            if new_stop != stop and new_stop > 0:
+                h["stop"] = new_stop
+                stop_updates.append(h)
+                stop_moved = True
+                old_stop   = stop
+                stop       = new_stop
 
-        if new_stop != stop and new_stop > 0:
-            h["stop"] = new_stop          # 更新 dict（稍後一次寫回 JSON）
-            stop_updates.append(f"{name}({code}) {stop:.1f} → {new_stop:.1f}")
-            stop = new_stop               # 本次健檢用新停損
-
-        # 重新算距停損（停損已更新）
-        to_stop = round((price - stop) / price * 100, 1) if stop > 0 else None
-        stop_str = f"距停損 {to_stop:.1f}%" if to_stop is not None else "無停損"
+        to_stop  = round((price - stop) / price * 100, 1) if stop > 0 else None
+        if stop_moved:
+            stop_str = f"停損 {stop:.0f}（↑{old_stop:.0f}）/ 距停損 {to_stop:.1f}%"
+        elif stop > 0:
+            stop_str = f"停損 {stop:.0f} / 距停損 {to_stop:.1f}%"
+        else:
+            stop_str = "停損未設"
 
         # ── 訊號判斷 ──
         signals = []
 
-        # 出場訊號（優先序）
+        # 出場訊號
         if to_stop is not None and price <= stop:
-            signals.append("🔴 跌破停損，考慮出場")
-            alerts.append(f"🔴 {name}({code}) 已跌破停損 {stop:.1f}，考慮出場")
+            signals.append("🔴 跌破停損，出場")
+            alerts.append(f"🔴 {name}({code}) 已跌破停損 {stop:.0f}")
         elif to_stop is not None and to_stop < 3:
             signals.append(f"🟠 接近停損（剩 {to_stop:.1f}%）")
             alerts.append(f"🟠 {name}({code}) 距停損僅 {to_stop:.1f}%")
@@ -301,30 +305,23 @@ def cmd_health_check() -> str:
         if ma5 and ma20 and ma5 < ma20 and price >= ma20:
             signals.append("⚠️ MA5 < MA20，動能轉弱")
 
-        # 今日 K 棒異常
+        # 今日 K 棒
         if chg_pct <= -5:
-            if vol_ratio and vol_ratio >= 1.5:
-                signals.append("⚠️ 爆量長黑（出貨訊號）")
-            else:
-                signals.append("⚠️ 今日大跌 -5%↓")
+            signals.append("⚠️ 爆量長黑" if (vol_ratio and vol_ratio >= 1.5) else "⚠️ 今日大跌 -5%↓")
         elif chg_pct <= -3:
             signals.append("⚠️ 今日大跌")
 
-        # 接近目標 TP2
+        # 接近 TP2
         if tp2 and price >= tp2 * 0.95:
-            signals.append(f"🎯 接近 TP2（{tp2:.0f}），考慮分批出場")
-            alerts.append(f"🎯 {name}({code}) 已達 TP2 {tp2:.0f} 的 95%，考慮出場")
+            signals.append(f"🎯 接近 TP2 {tp2:.0f}，分批出場")
+            alerts.append(f"🎯 {name}({code}) 接近 TP2 {tp2:.0f}")
 
-        # 加碼提醒：獲利≥5% + 量縮≤1.2 + 回測MA5±2% + 止跌K
-        if (pnl_pct >= 5 and
-                vol_ratio and vol_ratio <= 1.2 and
-                near_ma5 and stop_k and
-                not any("出場" in s or "停損" in s for s in signals)):
-            tp2_hint = f"目標 TP2 {tp2:.0f}" if tp2 else ""
+        # 加碼：獲利≥5% + 量縮≤1.2 + 回測MA5±2% + 止跌K
+        if (pnl_pct >= 5 and vol_ratio and vol_ratio <= 1.2 and near_ma5 and stop_k
+                and not any("出場" in s or "停損" in s for s in signals)):
+            tp2_hint = f"目標 {tp2:.0f}" if tp2 else ""
             signals.append(f"🔼 加碼觀察 / {tp2_hint}" if tp2_hint else "🔼 加碼觀察")
-            alerts.append(f"🔼 {name}({code}) 符合加碼條件（獲利{pnl_pct:.1f}%，縮量回測MA5）")
-
-        # 移動停損已自動執行，不需在這裡提醒
+            alerts.append(f"🔼 {name}({code}) 加碼條件符合（獲利{pnl_pct:.1f}%，縮量回測MA5）")
 
         if not signals:
             signals.append("✅ 正常")
@@ -348,17 +345,11 @@ def cmd_health_check() -> str:
     # ── 自動移停：寫回 watchlist.json ──
     if stop_updates:
         _save_watchlist(data)
-        lines.append("\n📌 停損已自動更新（MA20×0.97）")
-        for u in stop_updates:
-            lines.append(f"• {u}")
 
-    # ── 今日行動清單 ──
+    # ── 今日行動清單（只列需要動作的）──
     if alerts:
         lines.append("\n📋 今日行動清單")
-        exit_alerts   = [a for a in alerts if a.startswith("🔴") or a.startswith("🟠")]
-        target_alerts = [a for a in alerts if a.startswith("🎯")]
-        add_alerts    = [a for a in alerts if a.startswith("🔼")]
-        for a in exit_alerts + target_alerts + add_alerts:
+        for a in sorted(alerts, key=lambda x: ("🔼🎯🟠🔴".index(x[0]) if x[0] in "🔼🎯🟠🔴" else 99)):
             lines.append(f"• {a}")
 
     return "\n".join(lines)
