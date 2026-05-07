@@ -76,7 +76,7 @@
       "code": "4919",
       "name": "新唐",
       "cost": 177.0,
-      "stop": null,
+      "stop": 161.0,
       "is_small": false,
       "max_position": 100
     },
