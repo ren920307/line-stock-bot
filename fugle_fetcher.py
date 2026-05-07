@@ -13,6 +13,10 @@ BASE = "https://api.fugle.tw/marketdata/v1.0/stock"
 HEADERS = {"X-API-KEY": API_KEY}
 
 
+class FugleRateLimitError(Exception):
+    """Fugle API 超過速率限制（429）"""
+
+
 def fetch_history(code: str, days: int = 120) -> pd.DataFrame:
     """歷史 K 線，給技術分析用"""
     end = date.today()
@@ -23,6 +27,8 @@ def fetch_history(code: str, days: int = 120) -> pd.DataFrame:
             "from": start.isoformat(),
             "to": end.isoformat(),
         }, timeout=10)
+        if r.status_code == 429:
+            raise FugleRateLimitError(f"歷史K線 429 rate limit: {code}")
         data = r.json()
         candles = data.get("data")
         if isinstance(candles, dict):
@@ -39,6 +45,8 @@ def fetch_history(code: str, days: int = 120) -> pd.DataFrame:
             "close": "Close", "volume": "Volume",
         })[["Open", "High", "Low", "Close", "Volume"]]
         return df.tail(days)
+    except FugleRateLimitError:
+        raise
     except Exception:
         return pd.DataFrame()
 
@@ -48,6 +56,8 @@ def fetch_quote(code: str) -> dict:
     url = f"{BASE}/intraday/quote/{code}"
     try:
         r = requests.get(url, headers=HEADERS, timeout=8)
+        if r.status_code == 429:
+            raise FugleRateLimitError(f"報價 429 rate limit: {code}")
         d = r.json()
         close = d.get("lastPrice") or d.get("closePrice") or d.get("previousClose")
         prev  = d.get("previousClose") or d.get("referencePrice")
@@ -58,6 +68,8 @@ def fetch_quote(code: str) -> dict:
         vol     = int(vol_raw) * 1000 if vol_raw else None  # Fugle 單位是張，乘回股與 twstock 一致
         chg_pct = round((close - prev) / prev * 100, 2) if (close and prev) else None
         return {"close": close, "prev": prev, "high": high, "low": low, "open": open_, "volume": vol, "chg_pct": chg_pct}
+    except FugleRateLimitError:
+        raise
     except Exception:
         return {}
 

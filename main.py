@@ -23,6 +23,7 @@ MY_USER_ID   = os.environ["LINE_USER_ID"]
 GROUP_ID_FILE = "group_ids.json"
 
 scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Taipei"))
+_scan_lock = threading.Lock()  # 防止掃描並發執行
 
 def _job_update_universe():
     try:
@@ -31,6 +32,9 @@ def _job_update_universe():
         print(f"[universe] 更新失敗：{e}")
 
 def _job_daily_scan():
+    if not _scan_lock.acquire(blocking=False):
+        push("⚠️ 掃描已在執行中，略過重複觸發。")
+        return
     try:
         push("⏳ 掃描開始...")
         result = run_daily_scan()
@@ -38,6 +42,8 @@ def _job_daily_scan():
     except Exception as e:
         import traceback
         push(f"❌ 掃描失敗：{e}\n{traceback.format_exc()[-300:]}")
+    finally:
+        _scan_lock.release()
 
 def _job_weekly_report():
     try:

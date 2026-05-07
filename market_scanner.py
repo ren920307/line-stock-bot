@@ -14,7 +14,7 @@ import os
 import time
 import pandas as pd
 from datetime import date
-from fugle_fetcher import fetch_history, fetch_quote
+from fugle_fetcher import fetch_history, fetch_quote, FugleRateLimitError
 
 UNIVERSE_PATH = os.path.join(os.path.dirname(__file__), "universe.json")
 SCAN_LOG_PATH = os.path.join(os.path.dirname(__file__), "scan_log.json")
@@ -154,7 +154,8 @@ def run_daily_scan() -> str:
     cnt_momentum  = 0   # 通過追價條件
     cnt_pullback  = 0   # 通過回測條件
 
-    for s in universe:
+    try:
+      for s in universe:
         try:
             time.sleep(1)
 
@@ -210,8 +211,19 @@ def run_daily_scan() -> str:
                 pullback_passed.append(stock)
                 cnt_pullback += 1
 
+        except FugleRateLimitError:
+            raise
         except Exception:
             continue
+
+    except FugleRateLimitError as e:
+        print(f"  ⛔ 觸發 Fugle rate limit，掃描中止：{e}")
+        return (
+            f"【強勢股掃描】⛔ API 速率超限\n"
+            f"Fugle 免費方案 60次/分鐘已用盡，掃描中止。\n"
+            f"原因：同時有兩個掃描執行（已加鎖修復，明天應正常）。\n"
+            f"已掃描 {cnt_quote_ok} 檔 / 共 {cnt_total} 檔。"
+        )
 
     # ── 強勢追價組排序 ──
     if momentum_passed:
