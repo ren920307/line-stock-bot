@@ -1,18 +1,10 @@
 {
   "holdings": [
     {
-      "code": "1785",
-      "name": "光洋科",
-      "cost": 162.73,
-      "stop": 149.7,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
       "code": "2337",
       "name": "旺宏",
       "cost": 161.48,
-      "stop": 148.6,
+      "stop": 150.0,
       "is_small": false,
       "max_position": 100
     },
@@ -20,7 +12,7 @@
       "code": "2449",
       "name": "京元電子",
       "cost": 292.67,
-      "stop": 269.3,
+      "stop": 307.7,
       "is_small": false,
       "max_position": 100
     },
@@ -28,23 +20,23 @@
       "code": "2455",
       "name": "全新",
       "cost": 296.42,
-      "stop": 272.7,
+      "stop": 324.8,
       "is_small": false,
       "max_position": 100
     },
     {
       "code": "3030",
       "name": "德律",
-      "cost": 338.8,
-      "stop": 311.7,
+      "cost": 355.72,
+      "stop": 393.8,
       "is_small": false,
-      "max_position": 100
+      "max_position": 1500
     },
     {
       "code": "3189",
       "name": "景碩",
       "cost": 387.55,
-      "stop": 356.5,
+      "stop": 457.2,
       "is_small": false,
       "max_position": 100
     },
@@ -52,7 +44,7 @@
       "code": "3260",
       "name": "威剛",
       "cost": 238.42,
-      "stop": 219.3,
+      "stop": 431.5,
       "is_small": false,
       "max_position": 100
     },
@@ -60,7 +52,7 @@
       "code": "3691",
       "name": "碩禾",
       "cost": 128.93,
-      "stop": 118.6,
+      "stop": 129.7,
       "is_small": false,
       "max_position": 100
     },
@@ -75,8 +67,16 @@
     {
       "code": "4768",
       "name": "晶呈科技",
-      "cost": 511.5,
-      "stop": 470.6,
+      "cost": 511.69,
+      "stop": 473.8,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "4919",
+      "name": "新唐",
+      "cost": 177.0,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
@@ -92,7 +92,7 @@
       "code": "6531",
       "name": "愛普*",
       "cost": 791.12,
-      "stop": 727.8,
+      "stop": 863.0,
       "is_small": false,
       "max_position": 100
     },
@@ -108,9 +108,19 @@
       "code": "8064",
       "name": "東捷",
       "cost": 121.17,
-      "stop": 111.5,
+      "sold_price": 108,
+      "sold_date": "2026-05-07",
+      "_archived": true
+    },
+    {
+      "code": "1785",
+      "name": "光洋科",
+      "cost": 171.0,
+      "stop": 162.8,
       "is_small": false,
-      "max_position": 100
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-07"
     }
   ],
   "themes": {
