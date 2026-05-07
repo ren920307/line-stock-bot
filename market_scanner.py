@@ -269,15 +269,13 @@ def run_daily_scan() -> str:
             chg_str = f"{s['chg_pct']:.1f}%"
         else:
             chg_str = "0.0%"
-        ma_dir  = "站上" if s['dist_ma20'] >= 0 else "跌破"
-        fib_str = s['fib_pos']
+        ma_dir = "站上" if s['dist_ma20'] >= 0 else "跌破"
         ma20 = int(s['ma20']) if s['ma20'] else "-"
         ma60 = int(s['ma60']) if s['ma60'] else "-"
         return (
             f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
             f"現價 {s['close']:.0f} 元（{chg_str}）/ 量比 {s['vol_ratio']:.1f}x\n"
-            f"MA20 {ma20}（{ma_dir} {abs(s['dist_ma20']):.1f}%）/ MA60 {ma60}\n"
-            f"📍 {fib_str}"
+            f"MA20 {ma20}（{ma_dir} {abs(s['dist_ma20']):.1f}%）/ MA60 {ma60}"
         )
 
     lines = [f"【強勢股掃描】 {today}"]
@@ -289,6 +287,7 @@ def run_daily_scan() -> str:
         lines.append("條件：漲幅 > 4% / 量比 > 2.0x / MA 多頭")
         lines.append("策略：今日動能強，明日等回測")
         for i, s in enumerate(top_m, 1):
+            lines.append("")
             lines.append(fmt_momentum(i, s))
     else:
         lines.append("🔥 強勢追價：今日無符合標的")
@@ -296,10 +295,13 @@ def run_daily_scan() -> str:
     # 回測進場組
     lines.append("")
     if top_p:
+        # 費波位置統一寫在條件裡，不重複顯示在每檔
+        fib_summary = top_p[0]['fib_pos'] if len(set(s['fib_pos'] for s in top_p)) == 1 else "費波中段"
         lines.append(f"📉 回測進場 TOP {len(top_p)}")
-        lines.append("條件：近 5 日曾漲 > 3.5% / 今日縮量 / 距 MA20 在 8% 內")
-        lines.append("策略：縮量回測，位置佳")
+        lines.append(f"條件：近 5 日曾漲 > 3.5% / 今日縮量 / 距 MA20 在 8% 內 / {fib_summary}")
+        lines.append("策略：縮量回測，確認止跌 K 再進")
         for i, s in enumerate(top_p, 1):
+            lines.append("")
             lines.append(fmt_pullback(i, s))
     else:
         lines.append("📉 回測進場：今日無符合標的")
