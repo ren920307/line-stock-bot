@@ -1,6 +1,14 @@
 {
   "holdings": [
     {
+      "code": "00981A",
+      "name": "統一台股增強",
+      "cost": 28.71,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
       "code": "2337",
       "name": "旺宏",
       "cost": 161.48,
@@ -27,7 +35,7 @@
     {
       "code": "3030",
       "name": "德律",
-      "cost": 355.72,
+      "cost": 355.84,
       "stop": 393.8,
       "is_small": false,
       "max_position": 1500
@@ -41,10 +49,10 @@
       "max_position": 100
     },
     {
-      "code": "3260",
-      "name": "威剛",
-      "cost": 238.42,
-      "stop": 431.5,
+      "code": "3653",
+      "name": "健策",
+      "cost": 4000.0,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
@@ -75,7 +83,7 @@
     {
       "code": "4919",
       "name": "新唐",
-      "cost": 177.0,
+      "cost": 177.25,
       "stop": 161.0,
       "is_small": false,
       "max_position": 100
@@ -121,6 +129,16 @@
       "max_position": 100,
       "_archived": true,
       "sold_date": "2026-05-07"
+    },
+    {
+      "code": "3260",
+      "name": "威剛",
+      "cost": 238.42,
+      "stop": 431.5,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-08"
     }
   ],
   "themes": {
