@@ -103,7 +103,7 @@ async def lifespan(app: FastAPI):
     # 每天 09:00 更新宇宙清單（週一到週五）
     # misfire_grace_time=60：排程超過 60 秒沒跑到（如部署重啟）就直接跳過，不補跑
     scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
-    scheduler.add_job(_job_daily_scan,      CronTrigger(hour=15, minute=25, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
+    # daily scan 已移除：改由外部 cron（cron-job.org）打 /daily-scan，避免 Render 雙 instance 重複觸發
     scheduler.add_job(_job_health_check,    CronTrigger(hour=16, minute=0, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
     scheduler.add_job(_job_weekly_report,   CronTrigger(hour=15, minute=35, day_of_week="fri", timezone=tz), misfire_grace_time=60)
     scheduler.start()
