@@ -35,7 +35,13 @@ def build_weekly_report() -> str:
         return "本週尚無掃描紀錄。"
 
     # 收集所有需要查現價的股票（去重）
-    all_codes = list({s["code"] for entries in week_logs.values() for s in entries})
+    # scan_log 格式：{"momentum": [...], "pullback": [...]}
+    def _all_stocks(entries):
+        if isinstance(entries, list):
+            return entries
+        return entries.get("momentum", []) + entries.get("pullback", [])
+
+    all_codes = list({s["code"] for entries in week_logs.values() for s in _all_stocks(entries)})
 
     # 用 Fugle 抓現價
     current_prices = {}
@@ -56,7 +62,7 @@ def build_weekly_report() -> str:
     win_cnt    = 0
 
     for day_iso in sorted(week_logs.keys()):
-        entries = week_logs[day_iso]
+        entries = _all_stocks(week_logs[day_iso])
         day_label = f"{int(day_iso[5:7])}/{int(day_iso[8:10])}"
         hold_days = (date.today() - date.fromisoformat(day_iso)).days
 
@@ -65,7 +71,7 @@ def build_weekly_report() -> str:
         for s in entries:
             code        = s["code"]
             name        = s["name"]
-            entry_price = s["entry_price"]
+            entry_price = s.get("entry_price") or s.get("price")
             cur_price   = current_prices.get(code)
 
             if not cur_price or not entry_price:

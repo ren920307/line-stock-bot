@@ -23,8 +23,28 @@ MY_USER_ID   = os.environ["LINE_USER_ID"]
 GROUP_ID_FILE = "group_ids.json"
 
 scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Taipei"))
-_scan_lock   = threading.Lock()  # 防止掃描並發執行
+_scan_lock   = threading.Lock()  # 防止掃描並發執行（同 process）
 _health_lock = threading.Lock()  # 防止健檢並發執行
+
+SCAN_FLAG_PATH = os.path.join(os.path.dirname(__file__), ".scan_done_today")
+
+def _already_scanned_today() -> bool:
+    from datetime import date
+    try:
+        if os.path.exists(SCAN_FLAG_PATH):
+            with open(SCAN_FLAG_PATH) as f:
+                return f.read().strip() == date.today().isoformat()
+    except Exception:
+        pass
+    return False
+
+def _mark_scan_done():
+    from datetime import date
+    try:
+        with open(SCAN_FLAG_PATH, "w") as f:
+            f.write(date.today().isoformat())
+    except Exception:
+        pass
 
 def _job_update_universe():
     try:
@@ -33,10 +53,12 @@ def _job_update_universe():
         print(f"[universe] 更新失敗：{e}")
 
 def _job_daily_scan():
+    if _already_scanned_today():
+        return  # 今天已掃過，跨 process 保護
     if not _scan_lock.acquire(blocking=False):
-        push("⚠️ 掃描已在執行中，略過重複觸發。")
-        return
+        return  # 同 process 已在跑
     try:
+        _mark_scan_done()
         push("⏳ 掃描開始...")
         result = run_daily_scan()
         push(result)
