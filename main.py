@@ -300,6 +300,57 @@ def daily_scan(force: int = 0):
     return {"status": "ok", "message": "掃描已啟動，約 10 分鐘後推播到 LINE", "forced": bool(force)}
 
 
+@app.get("/test-github-push")
+def test_github_push():
+    """在 Render 上實測 GitHub push 流程，回傳完整錯誤"""
+    import requests as _req
+    import base64 as _b64
+    from datetime import date as _date
+
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        return {"error": "GITHUB_TOKEN 未設定"}
+
+    repo = "ren920307/line-stock-bot"
+    fname = "scan_log.json"
+    url = f"https://api.github.com/repos/{repo}/contents/{fname}"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+
+    try:
+        # GET 取 sha
+        get_r = _req.get(url, headers=headers, timeout=10)
+        get_status = get_r.status_code
+        get_body = get_r.json() if get_r.headers.get("content-type","").startswith("application/json") else {}
+        sha = get_body.get("sha")
+
+        # 讀本地 scan_log
+        with open(SCAN_FLAG_PATH.replace(".scan_done_today", "scan_log.json"), "r", encoding="utf-8") as f:
+            content = f.read()
+
+        body = {
+            "message": f"chore: test push {_date.today().isoformat()} [skip render]",
+            "content": _b64.b64encode(content.encode("utf-8")).decode("ascii"),
+        }
+        if sha:
+            body["sha"] = sha
+
+        put_r = _req.put(url, headers=headers, json=body, timeout=15)
+        put_status = put_r.status_code
+        put_body = put_r.json() if put_r.headers.get("content-type","").startswith("application/json") else {"raw": put_r.text[:300]}
+
+        return {
+            "get_status": get_status,
+            "get_sha": sha[:12] if sha else None,
+            "get_message": get_body.get("message"),
+            "put_status": put_status,
+            "put_message": put_body.get("message"),
+            "put_commit_sha": put_body.get("commit", {}).get("sha", "")[:12] if "commit" in put_body else None,
+        }
+    except Exception as e:
+        import traceback
+        return {"exception": str(e), "trace": traceback.format_exc()[-500:]}
+
+
 @app.get("/diag")
 def diag():
     """診斷：看 scan_log、universe、flag 在 Render 上的狀態"""
