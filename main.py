@@ -307,9 +307,17 @@ def test_github_push():
     import base64 as _b64
     from datetime import date as _date
 
-    token = os.environ.get("GITHUB_TOKEN", "")
+    token_raw = os.environ.get("GITHUB_TOKEN", "")
+    token = token_raw.strip()
+    fingerprint = {
+        "raw_length": len(token_raw),
+        "stripped_length": len(token),
+        "had_whitespace": token_raw != token,
+        "prefix": token[:7] if token else "",
+        "suffix": token[-4:] if len(token) >= 4 else "",
+    }
     if not token:
-        return {"error": "GITHUB_TOKEN 未設定"}
+        return {"error": "GITHUB_TOKEN 未設定", "fingerprint": fingerprint}
 
     repo = "ren920307/line-stock-bot"
     fname = "scan_log.json"
@@ -339,6 +347,7 @@ def test_github_push():
         put_body = put_r.json() if put_r.headers.get("content-type","").startswith("application/json") else {"raw": put_r.text[:300]}
 
         return {
+            "fingerprint": fingerprint,
             "get_status": get_status,
             "get_sha": sha[:12] if sha else None,
             "get_message": get_body.get("message"),
@@ -348,7 +357,7 @@ def test_github_push():
         }
     except Exception as e:
         import traceback
-        return {"exception": str(e), "trace": traceback.format_exc()[-500:]}
+        return {"fingerprint": fingerprint, "exception": str(e), "trace": traceback.format_exc()[-500:]}
 
 
 @app.get("/diag")
