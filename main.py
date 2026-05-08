@@ -287,11 +287,37 @@ def update_universe():
 
 
 @app.get("/daily-scan")
-def daily_scan():
-    """手動觸發每日掃描（獨立 thread，不受 Render request 回收影響）"""
+def daily_scan(force: int = 0):
+    """手動觸發每日掃描（獨立 thread，不受 Render request 回收影響）。?force=1 可繞過 flag 強制重跑。"""
+    if force:
+        try:
+            if os.path.exists(SCAN_FLAG_PATH):
+                os.remove(SCAN_FLAG_PATH)
+        except Exception:
+            pass
     t = threading.Thread(target=_job_daily_scan, daemon=False)
     t.start()
-    return {"status": "ok", "message": "掃描已啟動，約 10 分鐘後推播到 LINE"}
+    return {"status": "ok", "message": "掃描已啟動，約 10 分鐘後推播到 LINE", "forced": bool(force)}
+
+
+@app.get("/diag")
+def diag():
+    """診斷：看 scan_log、universe、flag 在 Render 上的狀態"""
+    base = os.path.dirname(__file__)
+    info = {}
+    for fname in ["scan_log.json", "universe.json", ".scan_done_today"]:
+        path = os.path.join(base, fname)
+        if os.path.exists(path):
+            stat = os.stat(path)
+            info[fname] = {
+                "exists": True,
+                "size": stat.st_size,
+                "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            }
+        else:
+            info[fname] = {"exists": False}
+    info["github_token_set"] = bool(os.environ.get("GITHUB_TOKEN"))
+    return info
 
 
 @app.get("/weekly-report")
