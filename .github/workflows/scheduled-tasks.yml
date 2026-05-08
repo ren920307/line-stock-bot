@@ -1,0 +1,60 @@
+name: Scheduled Tasks
+
+on:
+  schedule:
+    # 每天台北 15:30 = UTC 07:30，週一到週五掃描
+    - cron: "30 7 * * 1-5"
+    # 每週五台北 16:00 = UTC 08:00，週報
+    - cron: "0 8 * * 5"
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "要手動跑哪個任務"
+        required: true
+        default: "daily-scan"
+        type: choice
+        options:
+          - daily-scan
+          - weekly-report
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up Render (避免 cold start)
+        run: |
+          for i in 1 2 3; do
+            curl -sf --max-time 30 https://line-stock-bot-a54m.onrender.com/ && break
+            echo "wake-up attempt $i failed, retrying..."
+            sleep 10
+          done
+
+      - name: Decide which task
+        id: decide
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "task=${{ inputs.task }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "0 8 * * 5" ]; then
+            echo "task=weekly-report" >> $GITHUB_OUTPUT
+          else
+            echo "task=daily-scan" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger task
+        run: |
+          TASK="${{ steps.decide.outputs.task }}"
+          echo "觸發 /$TASK"
+          for i in 1 2 3; do
+            HTTP_CODE=$(curl -s -o /tmp/resp.txt -w "%{http_code}" --max-time 60 \
+              "https://line-stock-bot-a54m.onrender.com/$TASK")
+            cat /tmp/resp.txt
+            echo ""
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "成功觸發 /$TASK"
+              exit 0
+            fi
+            echo "第 $i 次失敗 (HTTP $HTTP_CODE)，10 秒後重試..."
+            sleep 10
+          done
+          echo "三次都失敗"
+          exit 1
