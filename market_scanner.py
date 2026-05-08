@@ -8,16 +8,67 @@
   強勢追價組 TOP5：今日動能強，明日等回測確認
   回測進場組 TOP5：近期強勢、今日縮量回測，位置接近費波/MA20
 """
+import base64
 import gc
 import json
 import os
 import time
 import pandas as pd
+import requests
 from datetime import date
 from fugle_fetcher import fetch_history, fetch_quote, FugleRateLimitError
 
 UNIVERSE_PATH = os.path.join(os.path.dirname(__file__), "universe.json")
 SCAN_LOG_PATH = os.path.join(os.path.dirname(__file__), "scan_log.json")
+
+# GitHub 持久化（避免 Render 重啟丟失 scan_log）
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO  = "ren920307/line-stock-bot"
+GITHUB_FILE  = "scan_log.json"
+
+
+def _push_scan_log_to_github(content: str):
+    """把 scan_log 推回 repo，重啟也不會丟。commit 訊息加 [skip render] 避免觸發部署。"""
+    if not GITHUB_TOKEN:
+        print("  ⚠️ GITHUB_TOKEN 未設定，scan_log 只存本地（重啟會丟）")
+        return
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE}"
+        headers = {
+            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github+json",
+        }
+        # 取得當前檔案 sha（更新時必填）
+        r = requests.get(url, headers=headers, timeout=10)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+
+        body = {
+            "message": f"chore: update scan_log {date.today().isoformat()} [skip render]",
+            "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+        }
+        if sha:
+            body["sha"] = sha
+        r = requests.put(url, headers=headers, json=body, timeout=15)
+        if r.status_code in (200, 201):
+            print(f"  ✅ scan_log 已推回 GitHub")
+        else:
+            print(f"  ⚠️ GitHub push 失敗 {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        print(f"  ⚠️ scan_log push 例外：{e}")
+
+
+def _pull_scan_log_from_github() -> bool:
+    """啟動時從 GitHub raw 拉一次，確保本地有最新資料。回傳是否成功。"""
+    try:
+        url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE}"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            with open(SCAN_LOG_PATH, "w", encoding="utf-8") as f:
+                f.write(r.text)
+            return True
+    except Exception as e:
+        print(f"  ⚠️ scan_log pull 例外：{e}")
+    return False
 
 # 強勢追價組門檻
 MOMENTUM_MIN_CHG    = 4.0   # 漲幅 > 4%
@@ -131,8 +182,12 @@ def _save_scan_log(momentum: list, pullback: list):
         keys = sorted(log.keys())[-30:]
         log = {k: log[k] for k in keys}
 
+        content = json.dumps(log, ensure_ascii=False, indent=2)
         with open(SCAN_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(log, f, ensure_ascii=False, indent=2)
+            f.write(content)
+
+        # 推回 GitHub，避免 Render 重啟丟資料
+        _push_scan_log_to_github(content)
     except Exception as e:
         print(f"  ⚠️ scan_log 寫入失敗：{e}")
 

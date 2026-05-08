@@ -97,6 +97,14 @@ def _job_keepalive():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 啟動時從 GitHub 拉最新 scan_log，避免 Render 重啟後資料是舊的
+    try:
+        from market_scanner import _pull_scan_log_from_github
+        if _pull_scan_log_from_github():
+            print("[startup] scan_log 已從 GitHub 同步")
+    except Exception as e:
+        print(f"[startup] scan_log 同步失敗：{e}")
+
     tz = pytz.timezone("Asia/Taipei")
     # 每 10 分鐘 keepalive，避免 Render 免費方案休眠
     scheduler.add_job(_job_keepalive, 'interval', minutes=10)
