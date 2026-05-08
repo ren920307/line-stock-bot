@@ -74,6 +74,14 @@ def _job_weekly_report():
         push(result)
     except Exception as e:
         push(f"❌ 週報失敗：{e}")
+    # 模擬操盤報告（追漲組 vs 回測組），獨立 try 不影響上面
+    try:
+        from backtest_weekly import build_backtest_report
+        bt = build_backtest_report()
+        push(bt)
+    except Exception as e:
+        import traceback
+        push(f"❌ 模擬操盤失敗：{e}\n{traceback.format_exc()[-300:]}")
 
 def _job_health_check():
     if not _health_lock.acquire(blocking=False):
