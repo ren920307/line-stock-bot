@@ -59,7 +59,6 @@ def _job_daily_scan():
         return  # 同 process 已在跑
     try:
         _mark_scan_done()
-        push("⏳ 掃描開始...")
         result = run_daily_scan()
         push(result)
     except Exception as e:
