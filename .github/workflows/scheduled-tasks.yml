@@ -4,8 +4,10 @@ on:
   schedule:
     # 每天台北 15:30 = UTC 07:30，週一到週五掃描
     - cron: "30 7 * * 1-5"
-    # 每週五台北 16:00 = UTC 08:00，週報
-    - cron: "0 8 * * 5"
+    # 每天台北 16:00 = UTC 08:00，週一到週五健檢
+    - cron: "0 8 * * 1-5"
+    # 每週五台北 16:30 = UTC 08:30，週報
+    - cron: "30 8 * * 5"
   workflow_dispatch:
     inputs:
       task:
@@ -15,6 +17,7 @@ on:
         type: choice
         options:
           - daily-scan
+          - health-check
           - weekly-report
 
 jobs:
@@ -34,8 +37,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "task=${{ inputs.task }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.schedule }}" = "0 8 * * 5" ]; then
+          elif [ "${{ github.event.schedule }}" = "30 8 * * 5" ]; then
             echo "task=weekly-report" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "0 8 * * 1-5" ]; then
+            echo "task=health-check" >> $GITHUB_OUTPUT
           else
             echo "task=daily-scan" >> $GITHUB_OUTPUT
           fi

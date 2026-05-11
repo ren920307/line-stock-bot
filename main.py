@@ -118,8 +118,7 @@ async def lifespan(app: FastAPI):
     # 每天 09:00 更新宇宙清單（週一到週五）
     # misfire_grace_time=60：排程超過 60 秒沒跑到（如部署重啟）就直接跳過，不補跑
     scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
-    # daily scan、weekly report、health check 都改由 GitHub Actions 觸發
-    # 避免 Render 免費方案雙 instance 重複觸發造成 Fugle rate limit 爆掉
+    # daily scan、health check、weekly report 全部改由 GitHub Actions 觸發
     scheduler.start()
     yield
     scheduler.shutdown()
