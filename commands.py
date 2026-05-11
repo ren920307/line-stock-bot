@@ -272,6 +272,9 @@ def cmd_health_check() -> str:
             candidate  = round(ma20 * 0.97, 1)
             hard_floor = round(cost * 0.85, 1) if cost > 0 else 0
             new_stop   = max(stop, candidate, hard_floor)
+            # 停損不能高於現價（MA20 仍在高位時，只用成本底線）
+            if new_stop >= price:
+                new_stop = max(stop, hard_floor)
             if new_stop != stop and new_stop > 0:
                 h["stop"] = new_stop
                 stop_updates.append(h)
