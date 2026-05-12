@@ -26,25 +26,51 @@ scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Taipei"))
 _scan_lock   = threading.Lock()  # 防止掃描並發執行（同 process）
 _health_lock = threading.Lock()  # 防止健檢並發執行
 
-SCAN_FLAG_PATH = os.path.join(os.path.dirname(__file__), ".scan_done_today")
+SCAN_FLAG_PATH   = os.path.join(os.path.dirname(__file__), ".scan_done_today")
+HEALTH_FLAG_PATH = os.path.join(os.path.dirname(__file__), ".health_done_today")
+WEEKLY_FLAG_PATH = os.path.join(os.path.dirname(__file__), ".weekly_done_today")
 
 def _already_scanned_today() -> bool:
     from datetime import date
+    today = date.today().isoformat()
+    # 優先查 scan_log.json（Render 重啟後 flag 檔會消失，但 scan_log 從 GitHub 同步過來）
+    try:
+        log_path = os.path.join(os.path.dirname(__file__), "scan_log.json")
+        with open(log_path) as f:
+            data = json.load(f)
+        if today in data:
+            return True
+    except Exception:
+        pass
+    # fallback：flag 檔
     try:
         if os.path.exists(SCAN_FLAG_PATH):
             with open(SCAN_FLAG_PATH) as f:
+                return f.read().strip() == today
+    except Exception:
+        pass
+    return False
+
+def _already_done_today(flag_path: str) -> bool:
+    from datetime import date
+    try:
+        if os.path.exists(flag_path):
+            with open(flag_path) as f:
                 return f.read().strip() == date.today().isoformat()
     except Exception:
         pass
     return False
 
-def _mark_scan_done():
+def _mark_done_today(flag_path: str):
     from datetime import date
     try:
-        with open(SCAN_FLAG_PATH, "w") as f:
+        with open(flag_path, "w") as f:
             f.write(date.today().isoformat())
     except Exception:
         pass
+
+def _mark_scan_done():
+    _mark_done_today(SCAN_FLAG_PATH)
 
 def _job_update_universe():
     try:
@@ -68,6 +94,9 @@ def _job_daily_scan():
         _scan_lock.release()
 
 def _job_weekly_report():
+    if _already_done_today(WEEKLY_FLAG_PATH):
+        return
+    _mark_done_today(WEEKLY_FLAG_PATH)
     try:
         result = build_weekly_report()
         push(result)
@@ -83,10 +112,12 @@ def _job_weekly_report():
         push(f"❌ 模擬操盤失敗：{e}\n{traceback.format_exc()[-300:]}")
 
 def _job_health_check():
+    if _already_done_today(HEALTH_FLAG_PATH):
+        return
     if not _health_lock.acquire(blocking=False):
-        push("⚠️ 健檢已在執行中，略過重複觸發。")
         return
     try:
+        _mark_done_today(HEALTH_FLAG_PATH)
         result = cmd_health_check()
         push(result)
     except Exception as e:
@@ -118,7 +149,11 @@ async def lifespan(app: FastAPI):
     # 每天 09:00 更新宇宙清單（週一到週五）
     # misfire_grace_time=60：排程超過 60 秒沒跑到（如部署重啟）就直接跳過，不補跑
     scheduler.add_job(_job_update_universe, CronTrigger(hour=9, minute=0, day_of_week="mon-fri", timezone=tz), misfire_grace_time=60)
-    # daily scan、health check、weekly report 全部改由 GitHub Actions 觸發
+    # 主觸發：GitHub Actions（15:30 / 16:00 / 16:30）
+    # Fallback：APScheduler 晚 15 分鐘，_already_*_today() 防雙跑
+    scheduler.add_job(_job_daily_scan,    CronTrigger(hour=15, minute=45, day_of_week="mon-fri", timezone=tz), misfire_grace_time=300)
+    scheduler.add_job(_job_health_check,  CronTrigger(hour=16, minute=15, day_of_week="mon-fri", timezone=tz), misfire_grace_time=300)
+    scheduler.add_job(_job_weekly_report, CronTrigger(hour=16, minute=45, day_of_week="fri",     timezone=tz), misfire_grace_time=300)
     scheduler.start()
     yield
     scheduler.shutdown()
