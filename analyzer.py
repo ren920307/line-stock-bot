@@ -4,7 +4,6 @@ from twse_fetcher import fetch
 from fugle_fetcher import fetch_quote
 
 
-
 def analyze(code: str, name: str = "") -> str:
     df = fetch(code)
     if df.empty:
@@ -18,32 +17,30 @@ def analyze(code: str, name: str = "") -> str:
     prev  = df.iloc[-2]
     prev2 = df.iloc[-3] if len(df) >= 3 else prev
 
-    # 永遠先嘗試 Fugle（盤中或收盤後當日都有資料），失敗才退回 twstock 歷史
     q = fetch_quote(code)
     if q and q.get("close"):
-        close   = float(q["close"])
-        high    = float(q["high"]) if q.get("high") else float(last["High"])
-        low     = float(q["low"])  if q.get("low")  else float(last["Low"])
-        vol     = int(q["volume"]) if q.get("volume") else int(last["Volume"])
-        open_   = float(q.get("open") or last["Open"])
+        close      = float(q["close"])
+        high       = float(q["high"]) if q.get("high") else float(last["High"])
+        low        = float(q["low"])  if q.get("low")  else float(last["Low"])
+        vol        = int(q["volume"]) if q.get("volume") else int(last["Volume"])
+        open_      = float(q.get("open") or last["Open"])
         prev_close = float(q["prev"]) if q.get("prev") else float(prev["Close"])
     else:
-        close     = float(last["Close"])
-        open_     = float(last["Open"])
-        high      = float(last["High"])
-        low       = float(last["Low"])
-        vol       = int(last["Volume"])
+        close      = float(last["Close"])
+        open_      = float(last["Open"])
+        high       = float(last["High"])
+        low        = float(last["Low"])
+        vol        = int(last["Volume"])
         prev_close = float(prev["Close"])
-    ma5    = last["MA5"]
-    ma20   = last["MA20"]
-    ma60   = last["MA60"]
+
+    ma5  = float(last["MA5"])
+    ma20 = float(last["MA20"])
+    ma60 = float(last["MA60"])
     chg     = close - prev_close
     chg_pct = chg / prev_close * 100
 
-    high60 = df["High"].tail(60).max()
-    low60  = df["Low"].tail(60).min()
-    high20 = df["High"].tail(20).max()
-    low20  = df["Low"].tail(20).min()
+    high60 = float(df["High"].tail(60).max())
+    low60  = float(df["Low"].tail(60).min())
 
     total_chg_pct = (close - low60) / low60 * 100
 
@@ -57,7 +54,7 @@ def analyze(code: str, name: str = "") -> str:
     else:
         chg_label = f"{chg:+.1f}（{chg_pct:+.1f}%）"
 
-    # 均線排列
+    # 均線排列（嚴格定義：MA5>MA20>MA60 才是多頭）
     if ma5 > ma20 > ma60:
         trend = "多頭排列（MA5>MA20>MA60）"
     elif ma5 < ma20 < ma60:
@@ -75,42 +72,70 @@ def analyze(code: str, name: str = "") -> str:
         else:
             break
 
-    # 近期起漲點（20日最低點位置）
-    min_idx   = df["Low"].tail(20).idxmin()
-    min_price = df["Low"].tail(20).min()
-    # 估算起漲日
-    min_pos   = df.index.get_loc(min_idx)
-    days_ago  = len(df) - 1 - min_pos
+    # FVG：三K結構（前K高 < 後K低）才算，並判斷位於現價上方還是下方
+    # 用前3根K棒：prev2(i-2), prev(i-1), last(i)
+    fvg_low = fvg_high = None
+    fvg_position = None  # "above" / "below"
 
-    # OB 區：起漲前後的大陽棒區域
-    ob_start = round(float(min_price) * 1.0, 0)
-    ob_end   = round(float(min_price) * 1.10, 0)
+    prev2_high = float(prev2["High"])
+    last_low   = float(last["Low"]) if not q else float(q.get("low") or last["Low"])
 
-    # FVG：今日跳空缺口
-    fvg_low  = round(prev_close, 1)
-    fvg_high = round(float(open_), 1)
-    has_fvg  = fvg_high > fvg_low * 1.005
-
-    resist1  = round(float(high60), 1)   # 前高 = 壓力 / BSL
-    support1 = round(float(ma20), 1)     # MA20 = 主要支撐
-    support2 = round(float(ob_end), 1)   # OB頂 = 次要支撐
-
-    # 進場區：FVG在現價上方才有意義，否則用MA20
-    if has_fvg and fvg_low > close:
-        entry_desc = f"回測FVG（{fvg_low}～{fvg_high}）止跌確認"
-        entry_ref  = round((fvg_low + fvg_high) / 2, 1)
+    if last_low > prev2_high * 1.003:
+        # 近3K形成看漲FVG（缺口在下方，屬未填支撐）
+        fvg_low  = round(prev2_high, 1)
+        fvg_high = round(last_low, 1)
+        fvg_position = "below"
     else:
-        entry_desc = f"回測MA20（{ma20:.0f}）止跌確認"
-        entry_ref  = round(float(ma20), 1)
+        # 退而求其次：偵測昨收→今開的跳空（大於0.5%）
+        gap_low  = round(prev_close, 1)
+        gap_high = round(open_, 1)
+        if gap_high > gap_low * 1.005:
+            fvg_low  = gap_low
+            fvg_high = gap_high
+            # 跳空後現價在缺口上方：缺口是下方支撐；現價在缺口下方：缺口是上方壓力
+            fvg_position = "below" if close >= gap_high else "above"
 
-    # 停損：進場參考價 -5%
-    stop    = round(entry_ref * 0.95, 1)
-    target1 = resist1
-    target2 = round(resist1 * 1.08, 1)
-    risk    = entry_ref - stop
-    rr      = round((target1 - entry_ref) / risk, 1) if risk > 0 else 0
+    # 壓力（高於現價）
+    resist_lines = [f"{round(high60, 1)}元（60日高/BSL）"]
+    if fvg_position == "above" and fvg_low is not None:
+        resist_lines.append(f"未填缺口 {fvg_low}～{fvg_high}元（壓力）")
 
-    # 現價判斷
+    # 支撐（低於現價）
+    support_main = None
+    support_sec  = None
+
+    if ma20 < close:
+        support_main = (round(ma20, 1), "MA20")
+    if ma60 < close:
+        support_sec = (round(ma60, 1), "MA60")
+
+    fvg_support_line = None
+    if fvg_position == "below" and fvg_low is not None and fvg_high < close:
+        fvg_support_line = f"FVG缺口 {fvg_low}元～{fvg_high}元（未填支撐）"
+
+    # 進場區：優先 FVG 支撐 > MA20 > MA60
+    if fvg_position == "below" and fvg_low is not None:
+        entry_ref  = round((fvg_low + fvg_high) / 2, 1)
+        entry_desc = f"回測FVG（{fvg_low}～{fvg_high}）止跌確認"
+    elif support_main:
+        entry_ref  = support_main[0]
+        entry_desc = f"回測MA20（{entry_ref}）止跌確認"
+    elif support_sec:
+        entry_ref  = support_sec[0]
+        entry_desc = f"回測MA60（{entry_ref}）止跌確認"
+    else:
+        entry_ref  = round(close, 1)
+        entry_desc = "均線全在上方，結構偏弱，暫不建議進場"
+
+    # 停損：取 MA60 下 3% 與進場價下 5% 中較高者（有結構支撐優先）
+    stop_ma60  = round(ma60 * 0.97, 1)
+    stop_entry = round(entry_ref * 0.95, 1)
+    stop = max(stop_ma60, stop_entry) if stop_ma60 < entry_ref else stop_entry
+
+    target1 = round(high60, 1)
+    risk = entry_ref - stop
+    rr   = round((target1 - entry_ref) / risk, 1) if risk > 0 else 0
+
     dist_to_entry = round((close - entry_ref) / entry_ref * 100, 1)
     if dist_to_entry > 5:
         action = f"現價離進場區 +{dist_to_entry}%，等回測再看"
@@ -140,15 +165,19 @@ def analyze(code: str, name: str = "") -> str:
     if consec_limit >= 2:
         lines.append(f"連 {consec_limit} 日漲停，強勢推進中")
 
-    lines += [
-        "",
-        "關鍵位：",
-        f"壓力 {resist1}元（前高/BSL）",
-        f"支撐 {support1}元（MA20）　次支撐 {support2}元（OB）",
-    ]
+    lines += ["", "關鍵位："]
 
-    if has_fvg:
-        lines.append(f"FVG缺口 {fvg_low}元～{fvg_high}元（未填）")
+    # 壓力區（由低到高）
+    for r in resist_lines:
+        lines.append(f"壓力 {r}")
+
+    # 支撐區（高到低）
+    if support_main:
+        lines.append(f"支撐 {support_main[0]}元（{support_main[1]}）")
+    if fvg_support_line:
+        lines.append(fvg_support_line)
+    if support_sec:
+        lines.append(f"次支撐 {support_sec[0]}元（{support_sec[1]}）")
 
     lines += [
         "",
