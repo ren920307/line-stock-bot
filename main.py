@@ -476,6 +476,22 @@ def test_scan():
     return {"status": "ok", "result": result}
 
 
+@app.get("/pull-watchlist")
+def pull_watchlist():
+    """sync_from_fubon.py 推完 GitHub 後呼叫，讓 Render 立刻拿到最新持股"""
+    try:
+        import requests as _req
+        url = "https://raw.githubusercontent.com/ren920307/line-stock-bot/main/watchlist.json"
+        r = _req.get(url, timeout=10)
+        if r.status_code == 200:
+            with open(os.path.join(os.path.dirname(__file__), "watchlist.json"), "w", encoding="utf-8") as f:
+                f.write(r.text)
+            return {"status": "ok", "message": "watchlist 已更新"}
+        return {"status": "error", "http": r.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 @app.get("/scan-result")
 def scan_result():
     try:

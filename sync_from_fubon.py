@@ -122,7 +122,81 @@ def main():
     if not added and not updated and not removed:
         print("  ↔️  無變動")
 
+    _save_snapshot(wl, new_active)
+    _push_to_github_and_render()
     return 0
+
+
+def _push_to_github_and_render():
+    """git push watchlist.json 到 GitHub，再 ping Render 拉取最新版本"""
+    import subprocess, urllib.request
+
+    repo_dir = os.path.dirname(os.path.abspath(__file__))
+    today = date.today().isoformat()
+
+    # git push（依賴本機已設好的 git 憑證）
+    try:
+        subprocess.run(["git", "add", "watchlist.json"], cwd=repo_dir, check=True, capture_output=True)
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=repo_dir, capture_output=True
+        )
+        if result.returncode != 0:  # 有變動才 commit
+            subprocess.run(
+                ["git", "commit", "-m", f"chore: auto sync holdings {today} [skip render]"],
+                cwd=repo_dir, check=True, capture_output=True
+            )
+            subprocess.run(["git", "push", "origin", "main"], cwd=repo_dir, check=True, capture_output=True)
+            print("  ✅ watchlist.json 已推到 GitHub")
+        else:
+            print("  ↔️  watchlist.json 無變動，略過 push")
+    except subprocess.CalledProcessError as e:
+        print(f"  ⚠️ git push 失敗：{e.stderr.decode()[:200]}")
+        return
+
+    # ping Render 拉取（等 GitHub CDN 更新，稍待 3 秒）
+    import time
+    time.sleep(3)
+    try:
+        req = urllib.request.Request(
+            "https://line-stock-bot-a54m.onrender.com/pull-watchlist",
+            headers={"User-Agent": "sync_from_fubon"}
+        )
+        with urllib.request.urlopen(req, timeout=30) as r:
+            body = r.read().decode()
+            print(f"  ✅ Render 已拉取最新 watchlist：{body}")
+    except Exception as e:
+        print(f"  ⚠️ Render ping 失敗：{e}")
+
+
+def _save_snapshot(wl: dict, active: dict):
+    """把持股快照存到 Claude 記憶資料夾，供下次對話參考"""
+    snapshot_path = os.path.expanduser(
+        "~/.claude/projects/-Users-ren/memory/holdings_snapshot.md"
+    )
+    today = date.today().isoformat()
+    lines = [
+        "---",
+        "name: 持股快照",
+        "description: 最新持股清單（成本/停損），由 sync_from_fubon.py 自動更新",
+        "type: reference",
+        "---",
+        f"# 持股快照（{today}）",
+        "",
+        "| 代號 | 名稱 | 成本 | 停損 | 距停損% |",
+        "|------|------|------|------|---------|",
+    ]
+    for h in active.values():
+        cost = h.get("cost") or 0
+        stop = h.get("stop") or 0
+        dist = round((cost - stop) / cost * 100, 1) if cost and stop else "-"
+        lines.append(f"| {h['code']} | {h['name']} | {cost:.1f} | {stop if stop else '-'} | {dist} |")
+
+    lines += ["", f"_同步時間：{today}_"]
+
+    with open(snapshot_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"  📝 快照已儲存：{snapshot_path}")
 
 
 if __name__ == "__main__":
