@@ -110,7 +110,9 @@
       "cost": 205.29,
       "stop": 188.9,
       "is_small": false,
-      "max_position": 100
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-12"
     },
     {
       "code": "8064",
