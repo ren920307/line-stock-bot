@@ -269,10 +269,14 @@ def cmd_health_check() -> str:
         stop_moved = False
         old_stop = stop
         if ma20:
-            candidate  = round(ma20 * 0.97, 1)
             hard_floor = round(cost * 0.85, 1) if cost > 0 else 0
+            # 獲利鎖：獲利 ≥ 15% 時改鎖現價 -10%，不再跟 MA20（防止大波段獲利全吐）
+            if pnl_pct >= 15:
+                candidate = round(price * 0.90, 1)
+            else:
+                candidate = round(ma20 * 0.97, 1)
             new_stop   = max(stop, candidate, hard_floor)
-            # 停損不能高於現價（MA20 仍在高位時，只用成本底線）
+            # 停損不能高於現價
             if new_stop >= price:
                 new_stop = max(stop, hard_floor)
             if new_stop != stop and new_stop > 0:
