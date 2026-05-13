@@ -142,29 +142,49 @@ def analyze(code: str, name: str = "") -> str:
     dist_to_entry = round((close - entry_ref) / entry_ref * 100, 1)
     target_pct    = round((target1 - entry_ref) / entry_ref * 100, 1)
 
-    # 信心星等（基於 R:R 與距離進場區、高位風險）
-    stars = 4 if rr >= 4 else 3 if rr >= 3 else 2 if rr >= 2 else 1
-    if dist_to_entry > 10:
-        stars = max(1, stars - 2)
-    elif dist_to_entry > 5:
-        stars = max(1, stars - 1)
-    if total_chg_pct > 80:
-        stars = max(1, stars - 2)
-    elif total_chg_pct > 60:
-        stars = max(1, stars - 1)
-    if consec_limit >= 2:
-        stars = max(1, stars - 1)
+    # ── 信心星等 ──
+    # 基礎分：R:R 決定
+    if rr >= 5:    stars = 5
+    elif rr >= 3:  stars = 4
+    elif rr >= 2:  stars = 3
+    elif rr >= 1.5: stars = 2
+    else:          stars = 1
+
+    # 扣分項（每項 -1 星，累計計算，最低 1 顆）
+    penalty = 0
+    if dist_to_entry > 10:   penalty += 2   # 離進場區太遠
+    elif dist_to_entry > 5:  penalty += 1   # 離進場區偏遠
+    if total_chg_pct > 60:   penalty += 1   # 60日漲幅高
+    if total_chg_pct > 80:   penalty += 1   # 60日漲幅過高（累計）
+    if not (ma5 > ma20 > ma60): penalty += 1  # 均線非多頭排列
+    if consec_limit >= 2:    penalty += 1   # 連漲停
+
+    stars = max(1, stars - penalty)
     stars_str = "★" * stars + "☆" * (5 - stars)
 
-    # 行動建議
-    if dist_to_entry > 5:
-        action = f"現價離進場區約 +{dist_to_entry}%，不追高，等待回測確認後進場更安全"
-    elif rr >= 3:
-        action = f"進場區附近，R:R {rr}:1，條件符合可考慮進場"
-    elif rr >= 2:
-        action = f"R:R {rr}:1 偏低，等更好位置"
+    # ── 行動建議（完全由星等決定，確保和星星一致）──
+    if stars >= 4:
+        if dist_to_entry > 3:
+            action = f"現價離進場區約 +{dist_to_entry}%，等回測確認後進場"
+        else:
+            action = f"R:R {rr}:1，條件優，確認止跌 K 後可進場"
+    elif stars == 3:
+        if dist_to_entry > 5:
+            action = f"現價離進場區約 +{dist_to_entry}%，等回測後確認再進場"
+        else:
+            action = f"R:R {rr}:1，條件尚可，確認進場區止跌後再行動"
+    elif stars == 2:
+        if dist_to_entry > 5:
+            action = f"現價離進場區約 +{dist_to_entry}%，不追高，等回測"
+        elif rr >= 3:
+            action = f"R:R {rr}:1，但風險因素拉低評分，謹慎進場"
+        else:
+            action = f"R:R {rr}:1 偏低，等更好位置"
     else:
-        action = f"R:R {rr}:1，不宜進場，繼續等待"
+        if dist_to_entry > 5:
+            action = f"現價離進場區約 +{dist_to_entry}%，不追高"
+        else:
+            action = f"R:R {rr}:1，條件不足，建議觀望"
 
     # 漲跌顯示
     chg_arrow = "▲" if chg >= 0 else "▼"
