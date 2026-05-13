@@ -252,7 +252,9 @@ def build_price_summary(code: str) -> str:
 
     chg_pct   = (close - prev_close) / prev_close * 100
     is_limit  = chg_pct >= 9.5
-    chg_label = f"漲停 +{chg_pct:.1f}%\n關聖帝君已經給我九個聖杯" if is_limit else f"{chg_pct:+.1f}%"
+    chg_arrow = "▲" if chg_pct >= 0 else "▼"
+    limit_tag = " 漲停" if is_limit else ""
+    chg_label = f"{chg_arrow}{chg_pct:+.1f}%{limit_tag}"
 
     # 費波計算：60日明顯低點 → 60日高點
     swing_low  = float(df["Low"].tail(60).min())
@@ -277,12 +279,10 @@ def build_price_summary(code: str) -> str:
     )
 
     return (
-        f"【今日數據】\n"
-        f"收：{close:.0f}（{chg_label}）\n"
-        f"開：{open_:.1f}　高：{high:.1f}　低：{low:.1f}\n"
-        f"量：{vol//1000:,}張\n"
-        f"MA5：{last['MA5']:.1f}　MA20：{last['MA20']:.1f}　MA60：{last['MA60']:.1f}\n"
-        f"60日高：{high60:.0f}　低：{low60:.0f}\n"
+        f"收盤 {close:.0f} 元 ( {chg_label} )\n"
+        f"開 {open_:.1f}　高 {high:.1f}　低 {low:.1f}　量 {vol//1000:,} 張\n"
+        f"MA5 {last['MA5']:.1f} / MA20 {last['MA20']:.1f} / MA60 {last['MA60']:.1f}\n"
+        f"60日高 {high60:.0f} / 低 {low60:.0f}\n"
         f"{fib_block}\n"
         f"\n近10日K線：\n{recent}"
     )
@@ -515,10 +515,15 @@ def _do_deep_analysis(code: str, name: str, reply_token: str):
         reply(reply_token, f"抱歉，{name or code} 的 K 線資料抓取失敗。")
         return
     result = deep_analyze(code, name, summary)
-    label = f"{name}（{code}）" if name else code
-    # 今日數據區塊：取費波那契之前的部分
-    today_block = summary.split("\n【費波那契")[0]
-    reply(reply_token, f"【{label} 深度分析】\n{today_block}\n\n{result}")
+    name_part = name if name else code
+    code_part = code if name else ""
+    today = datetime.now().strftime("%Y/%m/%d")
+    # 今日數據區塊：取費波那契之前的部分，轉換為 ▸ 格式
+    raw_today = summary.split("\n【費波那契")[0].strip()
+    today_lines = ["【 今日行情 】"] + [f"▸ {l}" for l in raw_today.split("\n") if l.strip()]
+    today_block = "\n".join(today_lines)
+    header = f"✦ {name_part} {code_part} ✦  {today}"
+    reply(reply_token, f"{header}\n\n{today_block}\n\n{result}")
 
 
 @app.post("/webhook")
