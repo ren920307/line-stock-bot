@@ -20,6 +20,30 @@ def _save_watchlist(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def _push_watchlist_to_github():
+    """健檢更新（停損移位 / tp1_done）後把 watchlist.json 推回 GitHub，避免 Render 重啟後丟失"""
+    import base64
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        return
+    try:
+        url = "https://api.github.com/repos/ren920307/line-stock-bot/contents/watchlist.json"
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+        r = requests.get(url, headers=headers, timeout=10)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+        with open("watchlist.json", "r", encoding="utf-8") as f:
+            content = f.read()
+        body = {
+            "message": f"chore: auto update watchlist {date.today().isoformat()} [skip render]",
+            "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+        }
+        if sha:
+            body["sha"] = sha
+        requests.put(url, headers=headers, json=body, timeout=15)
+    except Exception as e:
+        print(f"[watchlist] GitHub push 失敗：{e}")
+
+
 def _score_stock(code: str, quote: dict) -> int:
     """計算強勢分數 0~4"""
     score = 0
@@ -320,13 +344,19 @@ def cmd_health_check() -> str:
         elif chg_pct <= -3:
             signals.append("⚠️ 今日大跌")
 
-        # 停利訊號
-        if tp2 and price >= tp2 * 0.95:
-            signals.append(f"🎯 到達 TP2 {tp2:.0f}，出場剩餘50%")
-            alerts.append(f"🎯 {name}({code}) 到達 TP2 {tp2:.0f}，出場剩餘50%")
-        elif tp1 and price >= tp1 * 0.95:
-            signals.append(f"🎯 到達 TP1 {tp1:.0f}，出場50%")
-            alerts.append(f"🎯 {name}({code}) 到達 TP1 {tp1:.0f}，出場50%")
+        # 停利訊號（獲利鎖優先：有出場/停損訊號時跳過）
+        tp1_done = h.get("tp1_done", False)
+        already_exiting = any("出場" in s or "停損" in s for s in signals)
+
+        if not already_exiting:
+            if tp2 and price >= tp2 * 0.95:
+                signals.append(f"🎯 到達 TP2 {tp2:.0f}，出場剩餘50%")
+                alerts.append(f"🎯 {name}({code}) 到達 TP2 {tp2:.0f}，出場剩餘50%")
+            elif not tp1_done and tp1 and price >= tp1 * 0.95:
+                signals.append(f"🎯 到達 TP1 {tp1:.0f}，出場50%")
+                alerts.append(f"🎯 {name}({code}) 到達 TP1 {tp1:.0f}，出場50%")
+                h["tp1_done"] = True
+                stop_updates.append(h)
 
         # 加碼：獲利≥5% + 量縮≤1.2 + 回測MA5±2% + 止跌K
         if (pnl_pct >= 5 and vol_ratio and vol_ratio <= 1.2 and near_ma5 and stop_k
@@ -347,8 +377,10 @@ def cmd_health_check() -> str:
         if tp1 and tp2 and pnl_pct > 0:
             dist_tp1 = round((tp1 - price) / price * 100, 1)
             dist_tp2 = round((tp2 - price) / price * 100, 1)
-            if price >= tp1 * 0.95:
-                tp2_line = f"\nTP1 {tp1:.0f}✓ → 出場50% / TP2 {tp2:.0f}（距 {dist_tp2:.1f}%）→ 出場剩餘50%"
+            if tp1_done:
+                tp2_line = f"\nTP1 {tp1:.0f} ✓已出50% → TP2 {tp2:.0f}（距 {dist_tp2:.1f}%）→ 出場剩餘50%"
+            elif price >= tp1 * 0.95:
+                tp2_line = f"\nTP1 {tp1:.0f}（距 {dist_tp1:.1f}%）→ 出場50% / TP2 {tp2:.0f}（距 {dist_tp2:.1f}%）→ 出場剩餘50%"
             else:
                 tp2_line = f"\nTP1 {tp1:.0f}（距 {dist_tp1:.1f}%）→ 出場50% / TP2 {tp2:.0f}（距 {dist_tp2:.1f}%）→ 出場剩餘50%"
 
@@ -364,9 +396,10 @@ def cmd_health_check() -> str:
             block += f"\n{sig}"
         lines.append(block)
 
-    # ── 自動移停：寫回 watchlist.json ──
+    # ── 自動更新（移停 / tp1_done）：寫回 watchlist.json 並推 GitHub ──
     if stop_updates:
         _save_watchlist(data)
+        _push_watchlist_to_github()
 
     # ── 今日行動清單（只列需要動作的）──
     if alerts:
