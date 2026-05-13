@@ -50,7 +50,7 @@ def analyze(code: str, name: str = "") -> str:
     # 漲停判斷
     is_limit_up = chg_pct >= 9.5
     if is_limit_up:
-        chg_label = f"漲停 +{chg_pct:.1f}%\n關聖帝君已經給我九個聖杯"
+        chg_label = f"漲停 +{chg_pct:.1f}%"
     else:
         chg_label = f"{chg:+.1f}（{chg_pct:+.1f}%）"
 
@@ -95,8 +95,17 @@ def analyze(code: str, name: str = "") -> str:
             # 跳空後現價在缺口上方：缺口是下方支撐；現價在缺口下方：缺口是上方壓力
             fvg_position = "below" if close >= gap_high else "above"
 
-    # 壓力（高於現價）
-    resist_lines = [f"{round(high60, 1)}元（60日高/BSL）"]
+    # 費波延伸目標（用於突破前高時的新壓力）
+    fib_range = high60 - low60
+    fib_tp1   = round(low60 + fib_range * 1.272, 1)
+
+    # 壓力（必須高於現價）
+    resist_lines = []
+    if close < high60:
+        resist_lines.append(f"{round(high60, 1)}元（60日高/BSL）")
+    else:
+        # 現價已突破60日高，前高變支撐，改用費波 TP1 當壓力
+        resist_lines.append(f"{fib_tp1}元（費波TP1延伸）")
     if fvg_position == "above" and fvg_low is not None:
         resist_lines.append(f"未填缺口 {fvg_low}～{fvg_high}元（壓力）")
 
@@ -132,7 +141,7 @@ def analyze(code: str, name: str = "") -> str:
     stop_entry = round(entry_ref * 0.95, 1)
     stop = max(stop_ma60, stop_entry) if stop_ma60 < entry_ref else stop_entry
 
-    target1 = round(high60, 1)
+    target1 = fib_tp1 if close >= high60 else round(high60, 1)
     risk = entry_ref - stop
     rr   = round((target1 - entry_ref) / risk, 1) if risk > 0 else 0
 
