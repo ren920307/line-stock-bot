@@ -96,7 +96,7 @@ def analyze(code: str, name: str = "") -> str:
 
     # 壓力（必須高於現價）
     resist_lines = []
-    if close < high60:
+    if close < high60 * 0.97:
         resist_lines.append(f"{round(high60, 1)} 元")
     else:
         resist_lines.append(f"{fib_tp1} 元（費波TP1延伸）")
@@ -135,7 +135,8 @@ def analyze(code: str, name: str = "") -> str:
     stop_entry = round(entry_ref * 0.95, 1)
     stop = max(stop_ma60, stop_entry) if stop_ma60 < entry_ref else stop_entry
 
-    target1 = fib_tp1 if close >= high60 else round(high60, 1)
+    # 現價已接近或突破 60 日高（97% 以上）→ 前高壓力意義不大，改用費波 TP1
+    target1 = fib_tp1 if close >= high60 * 0.97 else round(high60, 1)
     risk = entry_ref - stop
     rr   = round((target1 - entry_ref) / risk, 1) if risk > 0 else 0
 
