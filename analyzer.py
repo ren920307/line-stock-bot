@@ -248,6 +248,35 @@ def analyze(code: str, name: str = "") -> str:
         f"▸ 進場區：{entry_zone}",
         f"▸ 停損：{stop} 元",
         f"▸ 目標：{target1} 元 (+{target_pct}%)",
+    ]
+
+    # 明日追漲劇本：今日漲幅 >= 4% 且趨勢不是空頭，才顯示
+    if chg_pct >= 4 and ma5 > ma60:
+        chase_entry  = round(close * 1.005, 0)  # 站穩今收 +0.5% 確認
+        breakout_mid = round((open_ + close) / 2, 1)  # 突破K中點
+
+        rr_a = round((target1 - chase_entry) / (chase_entry - stop), 1) if chase_entry > stop else 0
+        rr_b_risk = chase_entry - breakout_mid
+        rr_b = round((target1 - chase_entry) / rr_b_risk, 1) if rr_b_risk > 0 else 0
+
+        stop_a_str = (f"停損A：{stop} 元　R:R {rr_a}:1"
+                      if rr_a >= 2 else
+                      f"停損A：{stop} 元　R:R {rr_a}:1（偏低）")
+        stop_b_str = (f"停損B：{breakout_mid} 元（K棒中點）　R:R {rr_b}:1"
+                      if rr_b >= 2 else
+                      f"停損B：{breakout_mid} 元（K棒中點）　R:R {rr_b}:1（偏低）")
+
+        lines += [
+            "",
+            "【 明日追漲劇本 】",
+            f"▸ 條件：開盤站穩 {close:.0f} 元 + 量比 > 1.5x",
+            f"▸ 進場：{chase_entry:.0f} 元",
+            f"▸ {stop_a_str}（量比 1.5x～2x）",
+            f"▸ {stop_b_str}（量比 > 2x）",
+            f"▸ 目標：{target1} 元",
+        ]
+
+    lines += [
         "",
         "【 推薦指數 】",
         f"▸ 信心程度：{stars_str}",
