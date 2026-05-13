@@ -229,7 +229,7 @@ def cmd_health_check() -> str:
         df = fugle_history(code, days=65)
         ma5 = ma20 = None
         vol_ratio = None
-        tp2 = None
+        tp1 = tp2 = None
         near_ma5 = False
         stop_k = False
 
@@ -247,10 +247,12 @@ def cmd_health_check() -> str:
             avg_vol = df["Volume"].iloc[-21:-1].mean()
             vol_ratio = round(vol_today / avg_vol, 1) if avg_vol > 0 else None
 
-            # 費波 1.618 目標（60 日低→高）
+            # 費波目標（60 日低→高）
             low60  = float(df["Low"].tail(60).min())
             high60 = float(df["High"].tail(60).max())
-            tp2 = round(low60 + (high60 - low60) * 1.618, 1)
+            fib_rng = high60 - low60
+            tp1 = round(low60 + fib_rng * 1.272, 1)
+            tp2 = round(low60 + fib_rng * 1.618, 1)
 
             # 加碼條件：回測 MA5（現價距 MA5 在 ±3% 內）
             if ma5 and abs(price - ma5) / ma5 <= 0.03:
@@ -318,10 +320,13 @@ def cmd_health_check() -> str:
         elif chg_pct <= -3:
             signals.append("⚠️ 今日大跌")
 
-        # 接近 TP2
+        # 停利訊號
         if tp2 and price >= tp2 * 0.95:
-            signals.append(f"🎯 接近 TP2 {tp2:.0f}，分批出場")
-            alerts.append(f"🎯 {name}({code}) 接近 TP2 {tp2:.0f}")
+            signals.append(f"🎯 到達 TP2 {tp2:.0f}，出場剩餘50%")
+            alerts.append(f"🎯 {name}({code}) 到達 TP2 {tp2:.0f}，出場剩餘50%")
+        elif tp1 and price >= tp1 * 0.95:
+            signals.append(f"🎯 到達 TP1 {tp1:.0f}，出場50%")
+            alerts.append(f"🎯 {name}({code}) 到達 TP1 {tp1:.0f}，出場50%")
 
         # 加碼：獲利≥5% + 量縮≤1.2 + 回測MA5±2% + 止跌K
         if (pnl_pct >= 5 and vol_ratio and vol_ratio <= 1.2 and near_ma5 and stop_k
@@ -339,9 +344,13 @@ def cmd_health_check() -> str:
 
         # 停利行（有獲利才顯示）
         tp2_line = ""
-        if tp2 and pnl_pct > 0:
+        if tp1 and tp2 and pnl_pct > 0:
+            dist_tp1 = round((tp1 - price) / price * 100, 1)
             dist_tp2 = round((tp2 - price) / price * 100, 1)
-            tp2_line = f"\n停利 {tp2:.0f} / 距停利 {dist_tp2:.1f}%"
+            if price >= tp1 * 0.95:
+                tp2_line = f"\nTP1 {tp1:.0f}✓ → 出場50% / TP2 {tp2:.0f}（距 {dist_tp2:.1f}%）→ 出場剩餘50%"
+            else:
+                tp2_line = f"\nTP1 {tp1:.0f}（距 {dist_tp1:.1f}%）→ 出場50% / TP2 {tp2:.0f}（距 {dist_tp2:.1f}%）→ 出場剩餘50%"
 
         block = (
             f"\n{CIRCLE[i]} {name} ({code})\n"
