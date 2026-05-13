@@ -47,12 +47,7 @@ def analyze(code: str, name: str = "") -> str:
     today = date.today().strftime("%Y/%m/%d")
     label = f"{name}（{code}）" if name else code
 
-    # 漲停判斷
     is_limit_up = chg_pct >= 9.5
-    if is_limit_up:
-        chg_label = f"漲停 +{chg_pct:.1f}%"
-    else:
-        chg_label = f"{chg:+.1f}（{chg_pct:+.1f}%）"
 
     # 均線排列（嚴格定義：MA5>MA20>MA60 才是多頭）
     if ma5 > ma20 > ma60:
@@ -102,10 +97,9 @@ def analyze(code: str, name: str = "") -> str:
     # 壓力（必須高於現價）
     resist_lines = []
     if close < high60:
-        resist_lines.append(f"{round(high60, 1)}元（60日高/BSL）")
+        resist_lines.append(f"{round(high60, 1)} 元")
     else:
-        # 現價已突破60日高，前高變支撐，改用費波 TP1 當壓力
-        resist_lines.append(f"{fib_tp1}元（費波TP1延伸）")
+        resist_lines.append(f"{fib_tp1} 元（費波TP1延伸）")
     if fvg_position == "above" and fvg_low is not None:
         resist_lines.append(f"未填缺口 {fvg_low}～{fvg_high}元（壓力）")
 
@@ -146,57 +140,101 @@ def analyze(code: str, name: str = "") -> str:
     rr   = round((target1 - entry_ref) / risk, 1) if risk > 0 else 0
 
     dist_to_entry = round((close - entry_ref) / entry_ref * 100, 1)
-    if dist_to_entry > 5:
-        action = f"現價離進場區 +{dist_to_entry}%，等回測再看"
-    elif rr >= 3:
-        action = f"進場區附近，R:R {rr}:1，條件符合"
-    elif rr >= 1.5:
-        action = f"R:R {rr}:1，偏低，等更好位置"
-    else:
-        action = f"R:R {rr}:1，不宜追，等回測"
+    target_pct    = round((target1 - entry_ref) / entry_ref * 100, 1)
 
-    # 風險警示
-    warnings = []
-    if total_chg_pct > 60:
-        warnings.append(f"⚠ 60日漲幅 {total_chg_pct:.0f}%，高位風險大")
+    # 信心星等（基於 R:R 與距離進場區、高位風險）
+    stars = 4 if rr >= 4 else 3 if rr >= 3 else 2 if rr >= 2 else 1
+    if dist_to_entry > 10:
+        stars = max(1, stars - 2)
+    elif dist_to_entry > 5:
+        stars = max(1, stars - 1)
+    if total_chg_pct > 80:
+        stars = max(1, stars - 2)
+    elif total_chg_pct > 60:
+        stars = max(1, stars - 1)
     if consec_limit >= 2:
-        warnings.append(f"⚠ 連 {consec_limit} 日漲停，隔日開高走低風險高")
+        stars = max(1, stars - 1)
+    stars_str = "★" * stars + "☆" * (5 - stars)
+
+    # 行動建議
+    if dist_to_entry > 5:
+        action = f"現價離進場區約 +{dist_to_entry}%，不追高，等待回測確認後進場更安全"
+    elif rr >= 3:
+        action = f"進場區附近，R:R {rr}:1，條件符合可考慮進場"
+    elif rr >= 2:
+        action = f"R:R {rr}:1 偏低，等更好位置"
+    else:
+        action = f"R:R {rr}:1，不宜進場，繼續等待"
+
+    # 漲跌顯示
+    chg_arrow = "▲" if chg >= 0 else "▼"
+    chg_label = f"+{chg_pct:.1f}%" if chg >= 0 else f"{chg_pct:.1f}%"
+    limit_tag = " 漲停" if is_limit_up else ""
+
+    # 趨勢簡化顯示（只顯示狀態，不顯示 MA 數值）
+    if ma5 > ma20 > ma60:
+        trend_short = "多頭排列 ( 5 / 20 / 60 )"
+    elif ma5 < ma20 < ma60:
+        trend_short = "空頭排列 ( 5 / 20 / 60 )"
+    else:
+        trend_short = "均線糾結整理中"
+
+    # 風險提示列表
+    risk_notes = []
+    if total_chg_pct > 60:
+        risk_notes.append(f"60 日漲幅 {total_chg_pct:.0f}%，注意高位風險")
+    if consec_limit >= 2:
+        risk_notes.append(f"連 {consec_limit} 日漲停，注意隔日開高走低風險")
+
+    # 主要壓力與支撐（只取各一個最重要的）
+    main_resist = resist_lines[0] if resist_lines else "—"
+    main_support = f"{support_main[0]} 元" if support_main else (f"{support_sec[0]} 元" if support_sec else "—")
+
+    # 進場區描述
+    if fvg_position == "below" and fvg_low is not None:
+        entry_zone = f"待回測 {fvg_low} ～ {fvg_high} 止跌"
+    elif support_main:
+        entry_zone = f"待回測 MA20（{support_main[0]} 元）止跌"
+    elif support_sec:
+        entry_zone = f"待回測 MA60（{support_sec[0]} 元）止跌"
+    else:
+        entry_zone = "均線全在上方，暫不建議進場"
+
+    # ── 輸出 ──
+    name_part = name if name else code
+    code_part = code if name else ""
 
     lines = [
-        f"【{label}】{today}",
-        f"收 {close:.0f}元（{chg_label}）　量 {vol // 1000:,}張",
-        f"MA5 {ma5:.0f}元　MA20 {ma20:.0f}元　MA60 {ma60:.0f}元",
-        f"60日高 {high60:.0f}元　低 {low60:.0f}元",
+        f"✦ {name_part} {code_part} ✦  {today}",
         "",
-        f"趨勢：{trend}",
+        "【 行情現狀 】",
+        f"▸ 收盤價 {close:.0f} 元 ( {chg_arrow}{chg_label}{limit_tag} )",
+        f"▸ 成交量 {vol // 1000:,} 張",
+        f"▸ 趨勢為{trend_short}",
+        "",
+        "【 關鍵價位 】",
+        f"▸ 壓力位 {main_resist}",
+        f"▸ 支撐位 {main_support}",
     ]
 
-    if consec_limit >= 2:
-        lines.append(f"連 {consec_limit} 日漲停，強勢推進中")
-
-    lines += ["", "關鍵位："]
-
-    # 壓力區（由低到高）
-    for r in resist_lines:
-        lines.append(f"壓力 {r}")
-
-    # 支撐區（高到低）
-    if support_main:
-        lines.append(f"支撐 {support_main[0]}元（{support_main[1]}）")
     if fvg_support_line:
-        lines.append(fvg_support_line)
-    if support_sec:
-        lines.append(f"次支撐 {support_sec[0]}元（{support_sec[1]}）")
+        lines.append(f"▸ FVG 區 {fvg_low} ～ {fvg_high} 元")
+    elif fvg_position == "above" and fvg_low is not None:
+        lines.append(f"▸ 未填缺口 {fvg_low} ～ {fvg_high} 元（壓力）")
 
     lines += [
         "",
-        f"進場區：{entry_desc}",
-        f"停損：{stop}元　目標：{target1}元（+{round((target1-entry_ref)/entry_ref*100,1)}%）",
-        f"→ {action}",
+        "【 交易計畫 】",
+        f"▸ 進場區：{entry_zone}",
+        f"▸ 停損：{stop} 元",
+        f"▸ 目標：{target1} 元 (+{target_pct}%)",
+        "",
+        "【 推薦指數 】",
+        f"▸ 信心程度：{stars_str}",
+        f"▸ {action}",
     ]
 
-    if warnings:
-        lines.append("")
-        lines += warnings
+    for note in risk_notes:
+        lines.append(f"▸ {note}")
 
     return "\n".join(lines)
