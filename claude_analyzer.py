@@ -60,7 +60,7 @@ def deep_analyze(code: str, name: str, price_summary: str) -> str:
 - 大標題格式：【 區塊名稱 】（含空格）
 - 列點用 ▸，劇本編號用①②③④
 - 所有價格後加「元」
-- R:R = 報酬÷風險，寫成「X:1」；閾值：回測 ≥ 3:1，突破/追價/加碼 ≥ 2:1
+- R:R = 報酬÷風險，寫成「X:1」；閾值：突破/追價 ≥ 2:1，回測 ≥ 3:1，加碼 ≥ 2:1
 - R:R 1.5 ～ 閾值以下：寫「偏低，R:R X:1」
 - R:R ≤ 1.5：寫「不建議，R:R X:1」，不展開
 - 每點一句話，禁止長篇解釋，禁止重列數字
@@ -108,18 +108,18 @@ def deep_analyze(code: str, name: str, price_summary: str) -> str:
 【 進場劇本 】
 停損統一：XXX 元（來源）　TP1 XXX 元　TP2 XXX 元
 
-①回測｜XXX 元（費波+OB共振）止跌K確認
+①突破｜收盤突破 XXX 元（高於現價），量 > 1.5x 均量
+▸ 停損A XXX 元（今低）　R:R X:1（量比 1.5x～2x）
+▸ 停損B XXX 元（突破K中點）　R:R X:1（量比 > 2x）
+
+②追價｜XXX 元站穩（開盤站穩+量比 > 1.5x，高於現價）
+▸ 進場 XXX　停損 XXX（今低或K中點）　R:R X:1
+
+③回測｜XXX 元（費波+OB/MA共振）縮量止跌K確認
 ▸ 進場 XXX　停損 XXX　R:R X:1　有效 X日
 
-②突破｜收盤突破XXX 元（高於現價），量 > 1.5x均量
-▸ 停損A XXX 元　R:R X:1（量比1.5x～2x）
-▸ 停損B XXX 元（突破K中點）　R:R X:1（量比>2x）
-
-③追價｜XXX 元站穩（BSL掃單完成，高於現價）
-▸ 進場 XXX　停損 XXX　R:R X:1
-
-④加碼｜獲利≥5%，量縮回測MA5或費波0.5不破
-▸ 加碼 XXX　停損 XXX　R:R X:1　有效 X日"""
+④加碼｜獲利≥10%，量縮回測MA5或費波支撐不破，停損上移
+▸ 加碼 XXX　停損上移至 XXX　R:R X:1"""
 
     resp = requests.post(
         "https://api.anthropic.com/v1/messages",
