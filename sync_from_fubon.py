@@ -201,4 +201,6 @@ def _save_snapshot(wl: dict, active: dict):
 
 if __name__ == "__main__":
     code = main()
+    sys.stdout.flush()
+    sys.stderr.flush()
     os._exit(code or 0)  # 跳過 fubon_neo C++ destructor，避免 crash dialog

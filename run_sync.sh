@@ -1,5 +1,5 @@
 #!/bin/bash
-# 每個交易日 13:30 自動同步富邦持股到 watchlist.json
+# 每個交易日 14:00 自動同步富邦持股到 watchlist.json
 
 DOW=$(date +%u)  # 1=Mon ... 7=Sun
 if [ "$DOW" -ge 6 ]; then
