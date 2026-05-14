@@ -193,6 +193,9 @@ def _save_scan_log(momentum: list, pullback: list):
 
 
 def run_daily_scan() -> str:
+    if not os.environ.get("FUGLE_API_KEY"):
+        return "❌ 掃描失敗：FUGLE_API_KEY 未設定，請確認 Render 環境變數。"
+
     universe = _load_universe()
     if not universe:
         return "宇宙清單為空，請確認 universe.json 是否已更新。"

@@ -8,9 +8,11 @@ import requests
 import pandas as pd
 from datetime import date, timedelta
 
-API_KEY = os.environ.get("FUGLE_API_KEY", "")
 BASE = "https://api.fugle.tw/marketdata/v1.0/stock"
-HEADERS = {"X-API-KEY": API_KEY}
+
+
+def _headers() -> dict:
+    return {"X-API-KEY": os.environ.get("FUGLE_API_KEY", "")}
 
 
 class FugleRateLimitError(Exception):
@@ -23,7 +25,7 @@ def fetch_history(code: str, days: int = 120) -> pd.DataFrame:
     start = end - timedelta(days=int(days * 1.8))
     url = f"{BASE}/historical/candles/{code}"
     try:
-        r = requests.get(url, headers=HEADERS, params={
+        r = requests.get(url, headers=_headers(), params={
             "from": start.isoformat(),
             "to": end.isoformat(),
         }, timeout=10)
@@ -55,7 +57,7 @@ def fetch_quote(code: str) -> dict:
     """單檔即時報價"""
     url = f"{BASE}/intraday/quote/{code}"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=8)
+        r = requests.get(url, headers=_headers(), timeout=8)
         if r.status_code == 429:
             raise FugleRateLimitError(f"報價 429 rate limit: {code}")
         d = r.json()
