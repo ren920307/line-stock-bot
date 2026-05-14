@@ -48,7 +48,7 @@ def build_weekly_report() -> str:
     for code in all_codes:
         time.sleep(1)
         q = fetch_quote(code)
-        if q.get("close"):
+        if q and q.get("close"):
             current_prices[code] = q["close"]
 
     # 組報告

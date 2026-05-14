@@ -137,5 +137,8 @@ def deep_analyze(code: str, name: str, price_summary: str) -> str:
     )
 
     if resp.status_code == 200:
-        return resp.json()["content"][0]["text"]
+        try:
+            return resp.json()["content"][0]["text"]
+        except Exception as e:
+            return f"Claude API 回應解析失敗：{e}\n{resp.text[:200]}"
     return f"Claude API 錯誤：{resp.status_code} {resp.text[:200]}"

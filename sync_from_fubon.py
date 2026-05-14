@@ -71,9 +71,10 @@ def main():
     wl = load_watchlist()
     holdings = wl.get("holdings", [])
 
-    # 3. 建立現有 holdings 索引（忽略已 archived）
-    active = {h["code"]: h for h in holdings if not h.get("_archived")}
-    archived = [h for h in holdings if h.get("_archived")]
+    # 3. 建立現有 holdings 索引
+    active   = {h["code"]: h for h in holdings if not h.get("_archived")}
+    archived_list = [h for h in holdings if h.get("_archived")]
+    archived_by_code = {h["code"]: h for h in archived_list}
 
     added, updated, removed = [], [], []
 
@@ -87,6 +88,14 @@ def main():
             new_active[code] = old
             if abs(cost - (active[code].get("cost") or 0)) > 0.01:
                 updated.append(f'{old["name"]}({code}) 成本→{cost}')
+        elif code in archived_by_code:
+            # 曾持有後出場，現在重新買入 → 復活舊紀錄，保留停損設定
+            old = archived_by_code[code].copy()
+            old.pop("_archived", None)
+            old.pop("sold_date", None)
+            old["cost"] = cost
+            new_active[code] = old
+            added.append(f'{old["name"]}({code}) @{cost}（復活舊紀錄）')
         else:
             name = lookup_name(code)
             new_active[code] = {
@@ -99,17 +108,18 @@ def main():
             }
             added.append(f'{name}({code}) @{cost}')
 
-    # 5. watchlist 有但富邦沒有 → archived
+    # 5. watchlist 有但富邦沒有 → archived（只處理 active 中的）
     today = date.today().isoformat()
     for code, h in active.items():
         if code not in fubon_codes:
             h["_archived"] = True
             h["sold_date"] = today
-            archived.append(h)
             removed.append(f'{h["name"]}({code})')
 
-    # 6. 寫回（active 依富邦順序 + archived）
-    wl["holdings"] = list(new_active.values()) + archived
+    # 6. 寫回（active + 全部 archived，不重複）
+    still_archived = [h for h in archived_list if h["code"] not in new_active]
+    newly_archived  = [h for code, h in active.items() if code not in fubon_codes]
+    wl["holdings"] = list(new_active.values()) + still_archived + newly_archived
     save_watchlist(wl)
 
     print(f"✅ 同步完成：持股 {len(new_active)} 檔")

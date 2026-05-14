@@ -8,7 +8,10 @@ import requests
 import json
 import os
 import re
+import warnings
 from datetime import date
+
+warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 
 UNIVERSE_PATH = os.path.join(os.path.dirname(__file__), "universe.json")
 MIN_AMOUNT = 1e8  # 成交金額 > 1 億
@@ -87,20 +90,27 @@ def fetch_otc() -> list:
 
 
 def build_universe() -> int:
-    print("📋 更新宇宙清單（僅上市）...")
+    print("📋 更新宇宙清單（上市 + 上櫃）...")
     tse = fetch_twse()
+    otc = fetch_otc()
+    combined = tse + otc
 
-    if not tse:
-        # API 失敗，保留現有清單不覆蓋
-        print("  ⚠️ TWSE 回傳空，保留現有 universe.json")
+    if not combined:
+        print("  ⚠️ TSE/OTC 均回傳空，保留現有 universe.json")
         try:
             with open(UNIVERSE_PATH, "r", encoding="utf-8") as f:
                 return json.load(f).get("count", 0)
         except Exception:
             return 0
 
-    # 按成交金額排序，取前 300
-    ranked = sorted(tse, key=lambda x: x["amount"], reverse=True)[:MAX_STOCKS]
+    # 去重（TSE 優先），按成交金額排序，取前 300
+    seen = set()
+    merged = []
+    for s in sorted(combined, key=lambda x: x["amount"], reverse=True):
+        if s["code"] not in seen:
+            seen.add(s["code"])
+            merged.append(s)
+    ranked = merged[:MAX_STOCKS]
 
     universe = {
         "updated": date.today().isoformat(),
@@ -111,7 +121,9 @@ def build_universe() -> int:
     with open(UNIVERSE_PATH, "w", encoding="utf-8") as f:
         json.dump(universe, f, ensure_ascii=False, indent=2)
 
-    print(f"  ✅ 宇宙清單更新完成：{len(ranked)} 檔（TSE）")
+    tse_cnt = sum(1 for s in ranked if s["market"] == "TSE")
+    otc_cnt = sum(1 for s in ranked if s["market"] == "OTC")
+    print(f"  ✅ 宇宙清單更新：{len(ranked)} 檔（TSE {tse_cnt} / OTC {otc_cnt}）")
     return len(ranked)
 
 

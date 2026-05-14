@@ -2,9 +2,12 @@ import gc
 import json
 import os
 import time
+import warnings
 import requests
 import pandas as pd
 from datetime import date, datetime
+
+warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 from fugle_fetcher import fetch_quote, fetch_quotes_bulk
 from fugle_fetcher import fetch_history as fugle_history
 from twse_fetcher import fetch as fetch_history
@@ -69,7 +72,7 @@ def cmd_market() -> str:
         r = requests.get(
             "https://mis.twse.com.tw/stock/api/getStockInfo.jsp",
             params={"ex_ch": "tse_t00.tw", "json": "1", "delay": "0"},
-            headers={"User-Agent": "Mozilla/5.0"}, timeout=8,
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=8, verify=False,
         )
         d = r.json()["msgArray"][0]
         close = d.get("z", d.get("y", "-"))
@@ -94,7 +97,7 @@ def cmd_market() -> str:
 def cmd_holdings() -> str:
     """#持股"""
     data = _load_watchlist()
-    holdings = data.get("holdings", [])
+    holdings = [h for h in data.get("holdings", []) if not h.get("_archived")]
     if not holdings:
         return "目前無持股資料。"
     codes = [h["code"] for h in holdings]

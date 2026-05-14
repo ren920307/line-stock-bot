@@ -109,7 +109,8 @@ def _simulate(code: str, name: str, entry_date_iso: str, week_end_iso: str) -> d
         near_ma5 = (not pd.isna(ma5)) and abs(close - float(ma5)) / float(ma5) <= 0.03
         low_today = float(row["Low"])
         open_today = float(row["Open"])
-        chg_pct = (close - float(df.loc[df.index < d, "Close"].iloc[-1])) / float(df.loc[df.index < d, "Close"].iloc[-1]) * 100 if (df.index < d).any() else 0
+        prev_closes = df.loc[df.index < d, "Close"]
+        chg_pct = (close - float(prev_closes.iloc[-1])) / float(prev_closes.iloc[-1]) * 100 if len(prev_closes) > 0 else 0
         stop_k = chg_pct >= 0 or (close - low_today) / close >= 0.01
 
         if (add_count < MAX_ADDS and pnl_pct >= 5
