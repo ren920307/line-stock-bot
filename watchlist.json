@@ -3,15 +3,23 @@
     {
       "code": "00981A",
       "name": "統一台股增強",
-      "cost": 28.71,
+      "cost": 28.75,
       "stop": 27.2,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "1785",
+      "name": "1785",
+      "cost": 157.72,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
     {
       "code": "2337",
       "name": "旺宏",
-      "cost": 161.48,
+      "cost": 158.98,
       "stop": 150.0,
       "is_small": false,
       "max_position": 100
@@ -19,7 +27,7 @@
     {
       "code": "2449",
       "name": "京元電子",
-      "cost": 292.67,
+      "cost": 304.43,
       "stop": 307.7,
       "is_small": false,
       "max_position": 100
@@ -35,7 +43,7 @@
     {
       "code": "3030",
       "name": "德律",
-      "cost": 355.84,
+      "cost": 362.75,
       "stop": 393.8,
       "is_small": false,
       "max_position": 1500
@@ -49,9 +57,17 @@
       "max_position": 100
     },
     {
+      "code": "3260",
+      "name": "3260",
+      "cost": 238.42,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
       "code": "3653",
       "name": "健策",
-      "cost": 4000.0,
+      "cost": 4005.7,
       "stop": 3400.0,
       "is_small": false,
       "max_position": 100
@@ -59,7 +75,7 @@
     {
       "code": "3691",
       "name": "碩禾",
-      "cost": 128.93,
+      "cost": 137.03,
       "stop": 129.7,
       "is_small": false,
       "max_position": 100
@@ -77,22 +93,6 @@
       "name": "晶呈科技",
       "cost": 511.69,
       "stop": 484.0,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
-      "code": "4919",
-      "name": "新唐",
-      "cost": 177.25,
-      "stop": 161.0,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
-      "code": "5474",
-      "name": "聰泰",
-      "cost": 175.75,
-      "stop": 161.7,
       "is_small": false,
       "max_position": 100
     },
@@ -141,6 +141,26 @@
       "max_position": 100,
       "_archived": true,
       "sold_date": "2026-05-08"
+    },
+    {
+      "code": "4919",
+      "name": "新唐",
+      "cost": 177.25,
+      "stop": 161.0,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-14"
+    },
+    {
+      "code": "5474",
+      "name": "聰泰",
+      "cost": 175.75,
+      "stop": 161.7,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-14"
     }
   ],
   "themes": {
