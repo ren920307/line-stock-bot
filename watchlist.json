@@ -12,7 +12,7 @@
       "code": "1785",
       "name": "1785",
       "cost": 157.72,
-      "stop": null,
+      "stop": 134.1,
       "is_small": false,
       "max_position": 100
     },
@@ -60,7 +60,7 @@
       "code": "3260",
       "name": "3260",
       "cost": 238.42,
-      "stop": null,
+      "stop": 402.3,
       "is_small": false,
       "max_position": 100
     },
@@ -68,7 +68,7 @@
       "code": "3653",
       "name": "健策",
       "cost": 4005.7,
-      "stop": 3400.0,
+      "stop": 3404.8,
       "is_small": false,
       "max_position": 100
     },
