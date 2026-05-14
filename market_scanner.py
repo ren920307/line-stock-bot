@@ -22,20 +22,20 @@ UNIVERSE_PATH = os.path.join(os.path.dirname(__file__), "universe.json")
 SCAN_LOG_PATH = os.path.join(os.path.dirname(__file__), "scan_log.json")
 
 # GitHub 持久化（避免 Render 重啟丟失 scan_log）
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO  = "ren920307/line-stock-bot"
 GITHUB_FILE  = "scan_log.json"
 
 
 def _push_scan_log_to_github(content: str):
     """把 scan_log 推回 repo，重啟也不會丟。commit 訊息加 [skip render] 避免觸發部署。"""
-    if not GITHUB_TOKEN:
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
         print("  ⚠️ GITHUB_TOKEN 未設定，scan_log 只存本地（重啟會丟）")
         return
     try:
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE}"
         headers = {
-            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
         }
         # 取得當前檔案 sha（更新時必填）
