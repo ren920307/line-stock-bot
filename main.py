@@ -29,11 +29,57 @@ _health_lock = threading.Lock()  # 防止健檢並發執行
 SCAN_FLAG_PATH   = os.path.join(os.path.dirname(__file__), ".scan_done_today")
 HEALTH_FLAG_PATH = os.path.join(os.path.dirname(__file__), ".health_done_today")
 WEEKLY_FLAG_PATH = os.path.join(os.path.dirname(__file__), ".weekly_done_today")
+HEALTH_LOG_PATH  = os.path.join(os.path.dirname(__file__), "health_log.json")
+
+GITHUB_REPO = "ren920307/line-stock-bot"
+
+
+def _github_headers() -> dict:
+    token = os.environ.get("GITHUB_TOKEN", "")
+    return {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+
+
+def _pull_health_log_from_github() -> bool:
+    try:
+        url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/health_log.json"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            with open(HEALTH_LOG_PATH, "w", encoding="utf-8") as f:
+                f.write(r.text)
+            return True
+    except Exception as e:
+        print(f"[startup] health_log pull 失敗：{e}")
+    return False
+
+
+def _push_health_log_to_github(today: str):
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        return
+    try:
+        import base64
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/health_log.json"
+        r = requests.get(url, headers=_github_headers(), timeout=10)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+        try:
+            with open(HEALTH_LOG_PATH, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception:
+            content = json.dumps({today: True})
+        body = {
+            "message": f"chore: health_log {today} [skip render]",
+            "content": base64.b64encode(content.encode()).decode(),
+        }
+        if sha:
+            body["sha"] = sha
+        requests.put(url, headers=_github_headers(), json=body, timeout=15)
+    except Exception as e:
+        print(f"[health] GitHub push 失敗：{e}")
+
 
 def _already_scanned_today() -> bool:
     from datetime import date
     today = date.today().isoformat()
-    # 優先查 scan_log.json（Render 重啟後 flag 檔會消失，但 scan_log 從 GitHub 同步過來）
     try:
         log_path = os.path.join(os.path.dirname(__file__), "scan_log.json")
         with open(log_path) as f:
@@ -42,7 +88,6 @@ def _already_scanned_today() -> bool:
             return True
     except Exception:
         pass
-    # fallback：flag 檔
     try:
         if os.path.exists(SCAN_FLAG_PATH):
             with open(SCAN_FLAG_PATH) as f:
@@ -50,6 +95,48 @@ def _already_scanned_today() -> bool:
     except Exception:
         pass
     return False
+
+
+def _already_health_checked_today() -> bool:
+    from datetime import date
+    today = date.today().isoformat()
+    # 優先查 health_log.json（GitHub 同步過來，Render 重啟也不怕）
+    try:
+        with open(HEALTH_LOG_PATH) as f:
+            data = json.load(f)
+        if today in data:
+            return True
+    except Exception:
+        pass
+    # fallback：flag 檔
+    try:
+        if os.path.exists(HEALTH_FLAG_PATH):
+            with open(HEALTH_FLAG_PATH) as f:
+                return f.read().strip() == today
+    except Exception:
+        pass
+    return False
+
+
+def _mark_health_done():
+    from datetime import date
+    today = date.today().isoformat()
+    _mark_done_today(HEALTH_FLAG_PATH)
+    try:
+        try:
+            with open(HEALTH_LOG_PATH) as f:
+                log = json.load(f)
+        except Exception:
+            log = {}
+        log[today] = True
+        keys = sorted(log.keys())[-30:]
+        log = {k: log[k] for k in keys}
+        with open(HEALTH_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(log, f, ensure_ascii=False)
+        _push_health_log_to_github(today)
+    except Exception as e:
+        print(f"[health] health_log 寫入失敗：{e}")
+
 
 def _already_done_today(flag_path: str) -> bool:
     from datetime import date
@@ -80,9 +167,9 @@ def _job_update_universe():
 
 def _job_daily_scan():
     if _already_scanned_today():
-        return  # 今天已掃過，跨 process 保護
+        return
     if not _scan_lock.acquire(blocking=False):
-        return  # 同 process 已在跑
+        return
     try:
         _mark_scan_done()
         result = run_daily_scan()
@@ -102,7 +189,6 @@ def _job_weekly_report():
         push(result)
     except Exception as e:
         push(f"❌ 週報失敗：{e}")
-    # 模擬操盤報告（追漲組 vs 回測組），獨立 try 不影響上面
     try:
         from backtest_weekly import build_backtest_report
         bt = build_backtest_report()
@@ -112,12 +198,12 @@ def _job_weekly_report():
         push(f"❌ 模擬操盤失敗：{e}\n{traceback.format_exc()[-300:]}")
 
 def _job_health_check():
-    if _already_done_today(HEALTH_FLAG_PATH):
+    if _already_health_checked_today():
         return
     if not _health_lock.acquire(blocking=False):
         return
     try:
-        _mark_done_today(HEALTH_FLAG_PATH)
+        _mark_health_done()
         result = cmd_health_check()
         push(result)
     except Exception as e:
@@ -135,13 +221,18 @@ def _job_keepalive():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 啟動時從 GitHub 拉最新 scan_log，避免 Render 重啟後資料是舊的
+    # 啟動時從 GitHub 拉最新 scan_log / health_log，避免 Render 重啟後資料是舊的
     try:
         from market_scanner import _pull_scan_log_from_github
         if _pull_scan_log_from_github():
             print("[startup] scan_log 已從 GitHub 同步")
     except Exception as e:
         print(f"[startup] scan_log 同步失敗：{e}")
+    try:
+        if _pull_health_log_from_github():
+            print("[startup] health_log 已從 GitHub 同步")
+    except Exception as e:
+        print(f"[startup] health_log 同步失敗：{e}")
 
     tz = pytz.timezone("Asia/Taipei")
     # 每 10 分鐘 keepalive，避免 Render 免費方案休眠
