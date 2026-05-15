@@ -4,7 +4,7 @@
       "code": "00981A",
       "name": "統一台股增強",
       "cost": 28.75,
-      "stop": 27.2,
+      "stop": 27.4,
       "is_small": false,
       "max_position": 100
     },
@@ -100,7 +100,7 @@
       "code": "6531",
       "name": "愛普*",
       "cost": 791.12,
-      "stop": 945.0,
+      "stop": 972.0,
       "is_small": false,
       "max_position": 100
     },
