@@ -70,7 +70,8 @@
       "cost": 4005.7,
       "stop": 3404.8,
       "is_small": false,
-      "max_position": 100
+      "max_position": 100,
+      "_archived": true
     },
     {
       "code": "3691",
@@ -102,7 +103,8 @@
       "cost": 791.12,
       "stop": 1021.5,
       "is_small": false,
-      "max_position": 100
+      "max_position": 100,
+      "_archived": true
     },
     {
       "code": "8027",
