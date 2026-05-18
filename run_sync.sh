@@ -14,3 +14,9 @@ echo "$(date '+%Y-%m-%d %H:%M'): 開始同步持股..." >> log/sync.log
 /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 sync_from_fubon.py >> log/sync.log 2>&1
 
 echo "$(date '+%Y-%m-%d %H:%M'): 完成" >> log/sync.log
+
+# 通知 Render 拉最新 watchlist.json
+curl -sf --max-time 30 "https://line-stock-bot-a54m.onrender.com/pull-watchlist" \
+    >> log/sync.log 2>&1 \
+    && echo "" >> log/sync.log \
+    || echo "$(date '+%Y-%m-%d %H:%M'): ⚠️ pull-watchlist 失敗" >> log/sync.log
