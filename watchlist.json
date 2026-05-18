@@ -19,7 +19,7 @@
     {
       "code": "2337",
       "name": "旺宏",
-      "cost": 158.98,
+      "cost": 158.08,
       "stop": 150.0,
       "is_small": false,
       "max_position": 100
@@ -27,7 +27,7 @@
     {
       "code": "2449",
       "name": "京元電子",
-      "cost": 304.43,
+      "cost": 293.01,
       "stop": 307.7,
       "is_small": false,
       "max_position": 100
@@ -59,8 +59,24 @@
     {
       "code": "3260",
       "name": "威剛",
-      "cost": 238.42,
+      "cost": 271.53,
       "stop": 402.3,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "3691",
+      "name": "碩禾",
+      "cost": 137.03,
+      "stop": 129.7,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "4768",
+      "name": "晶呈科技",
+      "cost": 511.69,
+      "stop": 484.0,
       "is_small": false,
       "max_position": 100
     },
@@ -72,30 +88,6 @@
       "is_small": false,
       "max_position": 100,
       "_archived": true
-    },
-    {
-      "code": "3691",
-      "name": "碩禾",
-      "cost": 137.03,
-      "stop": 129.7,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
-      "code": "3693",
-      "name": "營邦",
-      "cost": 676.18,
-      "stop": 624.2,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
-      "code": "4768",
-      "name": "晶呈科技",
-      "cost": 511.69,
-      "stop": 484.0,
-      "is_small": false,
-      "max_position": 100
     },
     {
       "code": "6531",
@@ -125,26 +117,6 @@
       "_archived": true
     },
     {
-      "code": "1785",
-      "name": "光洋科",
-      "cost": 171.0,
-      "stop": 162.8,
-      "is_small": false,
-      "max_position": 100,
-      "_archived": true,
-      "sold_date": "2026-05-07"
-    },
-    {
-      "code": "3260",
-      "name": "威剛",
-      "cost": 238.42,
-      "stop": 431.5,
-      "is_small": false,
-      "max_position": 100,
-      "_archived": true,
-      "sold_date": "2026-05-08"
-    },
-    {
       "code": "4919",
       "name": "新唐",
       "cost": 177.25,
@@ -163,6 +135,16 @@
       "max_position": 100,
       "_archived": true,
       "sold_date": "2026-05-14"
+    },
+    {
+      "code": "3693",
+      "name": "營邦",
+      "cost": 676.18,
+      "stop": 624.2,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-18"
     }
   ],
   "themes": {
