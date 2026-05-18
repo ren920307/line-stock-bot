@@ -34,6 +34,8 @@ jobs:
             echo "wake-up attempt $i failed, retrying..."
             sleep 10
           done
+          echo "等待 Render 完全初始化..."
+          sleep 30
 
       - name: Decide which task
         id: decide
