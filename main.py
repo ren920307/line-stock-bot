@@ -521,9 +521,12 @@ def weekly_report_route():
 
 
 @app.get("/health-check")
-def health_check_route():
-    """手動觸發持股健檢"""
-    t = threading.Thread(target=_job_health_check, daemon=False)
+def health_check_route(force: int = 0):
+    """手動觸發持股健檢；force=1 跳過去重檢查"""
+    if force:
+        t = threading.Thread(target=lambda: (push(cmd_health_check())), daemon=False)
+    else:
+        t = threading.Thread(target=_job_health_check, daemon=False)
     t.start()
     return {"status": "ok", "message": "健檢已啟動，約 2 分鐘後推播到 LINE"}
 
