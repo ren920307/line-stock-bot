@@ -207,6 +207,9 @@ def _job_health_check():
     if not _health_lock.acquire(blocking=False):
         return
     try:
+        if not os.environ.get("FUGLE_API_KEY"):
+            print("[health] FUGLE_API_KEY 未就緒，跳過，等 fallback 補跑")
+            return
         _mark_health_done()
         result = cmd_health_check()
         push(result)
