@@ -171,6 +171,10 @@ def _job_daily_scan():
     if not _scan_lock.acquire(blocking=False):
         return
     try:
+        if not os.environ.get("FUGLE_API_KEY"):
+            # 冷啟動競速：env var 未就緒，靜默放棄，讓 15:45 APScheduler fallback 補跑
+            print("[scan] FUGLE_API_KEY 未就緒，跳過，等 fallback 補跑")
+            return
         _mark_scan_done()
         result = run_daily_scan()
         push(result)
@@ -509,6 +513,7 @@ def diag():
         else:
             info[fname] = {"exists": False}
     info["github_token_set"] = bool(os.environ.get("GITHUB_TOKEN"))
+    info["fugle_api_key_set"] = bool(os.environ.get("FUGLE_API_KEY"))
     return info
 
 
