@@ -4,7 +4,7 @@
       "code": "00981A",
       "name": "統一台股增強",
       "cost": 28.75,
-      "stop": 27.5,
+      "stop": 27.7,
       "is_small": false,
       "max_position": 100
     },
@@ -52,7 +52,7 @@
       "code": "3189",
       "name": "景碩",
       "cost": 387.55,
-      "stop": 469.8,
+      "stop": 498.6,
       "is_small": false,
       "max_position": 100
     },
