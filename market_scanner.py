@@ -380,3 +380,122 @@ def run_daily_scan() -> str:
     )
 
     return "\n".join(lines)
+
+
+WATCHLIST_PATH = os.path.join(os.path.dirname(__file__), "watchlist.json")
+
+
+def scan_quality_pool() -> str:
+    """對 quality_pool（186檔優質股）跑同樣的強弱掃描，約5分鐘跑完。"""
+    if not os.environ.get("FUGLE_API_KEY"):
+        return "❌ 掃描失敗：FUGLE_API_KEY 未設定。"
+
+    with open(WATCHLIST_PATH, encoding="utf-8") as f:
+        pool = json.load(f).get("quality_pool", [])
+
+    if not pool:
+        return "質量池為空，請先建立 quality_pool。"
+
+    print(f"[quality_scan] 開始掃描質量池 {len(pool)} 檔...")
+
+    momentum_passed, pullback_passed = [], []
+    cnt_total = len(pool)
+    cnt_quote_ok = cnt_hist_ok = cnt_uptrend = cnt_momentum = cnt_pullback = 0
+
+    try:
+        for s in pool:
+            time.sleep(1)
+            q = fetch_quote(s["code"])
+            if not q or q.get("chg_pct") is None or q.get("close") is None:
+                continue
+            cnt_quote_ok += 1
+
+            chg_pct = q["chg_pct"]
+            close   = q["close"]
+            volume  = q.get("volume") or 0
+
+            time.sleep(1)
+            df = fetch_history(s["code"], days=70)
+            if df.empty or len(df) < 25:
+                del df
+                continue
+            cnt_hist_ok += 1
+
+            if volume == 0 and not df.empty:
+                volume = int(df["Volume"].iloc[-1])
+
+            stock = {"code": s["code"], "name": s["name"],
+                     "close": close, "chg_pct": chg_pct, "volume": volume}
+            stock = _enrich(stock, df)
+            del df
+            gc.collect()
+
+            if not _is_uptrend(stock):
+                continue
+            cnt_uptrend += 1
+
+            if (chg_pct >= MOMENTUM_MIN_CHG and
+                    stock["vol_ratio"] >= MOMENTUM_MIN_VOL):
+                stock["near_high"] = stock["close"] >= stock["high60"] * 0.97
+                momentum_passed.append(stock)
+                cnt_momentum += 1
+            elif (PULLBACK_MIN_CHG <= chg_pct <= PULLBACK_MAX_CHG and
+                    stock["vol_ratio"] <= PULLBACK_MAX_VOL and
+                    stock["max_recent_chg"] >= 3.5 and
+                    stock["dist_ma20"] is not None and
+                    abs(stock["dist_ma20"]) <= 8.0):
+                pullback_passed.append(stock)
+                cnt_pullback += 1
+
+    except FugleRateLimitError:
+        return (
+            f"[質量池掃描] ⛔ 速率超限，已掃 {cnt_quote_ok} 檔 / 共 {cnt_total} 檔。\n"
+            f"追價 {cnt_momentum} 檔 / 回測 {cnt_pullback} 檔（部分結果）"
+        )
+
+    # 排序
+    if momentum_passed:
+        max_chg = max(s["chg_pct"] for s in momentum_passed)
+        max_vol = max(s["vol_ratio"] for s in momentum_passed)
+        for s in momentum_passed:
+            s["score"] = (s["chg_pct"] / max_chg * 0.5 +
+                          s["vol_ratio"] / max_vol * 0.3 +
+                          (0.0 if s["near_high"] else 0.2))
+        momentum_passed.sort(key=lambda x: x["score"], reverse=True)
+    if pullback_passed:
+        pullback_passed.sort(key=lambda x: abs(x["dist_ma20"]))
+
+    top_m = momentum_passed[:8]
+    top_p = pullback_passed[:8]
+
+    today  = date.today().strftime("%m/%d")
+    CIRCLE = "①②③④⑤⑥⑦⑧"
+    lines  = [f"【質量池強勢掃描】{today}", f"共 {cnt_total} 檔 → MA多頭 {cnt_uptrend} 檔", ""]
+
+    if top_m:
+        lines.append(f"🚀 追價組 TOP{len(top_m)}")
+        for i, s in enumerate(top_m, 1):
+            chg_str  = f"+{s['chg_pct']:.1f}%"
+            high_tag = "⚠️近前高" if s["near_high"] else "✅強勢"
+            lines.append(
+                f"{CIRCLE[i-1]} {s['name']}({s['code']}) "
+                f"{s['close']:.0f}元 {chg_str} 量比{s['vol_ratio']:.1f}x {high_tag}"
+            )
+    else:
+        lines.append("🚀 追價組：今日無符合")
+
+    lines.append("")
+
+    if top_p:
+        lines.append(f"📉 回測組 TOP{len(top_p)}")
+        for i, s in enumerate(top_p, 1):
+            chg_str = f"+{s['chg_pct']:.1f}%" if s['chg_pct'] > 0 else f"{s['chg_pct']:.1f}%"
+            lines.append(
+                f"{CIRCLE[i-1]} {s['name']}({s['code']}) "
+                f"{s['close']:.0f}元 {chg_str} 距MA20:{s['dist_ma20']:+.1f}%"
+            )
+    else:
+        lines.append("📉 回測組：今日無符合")
+
+    lines.append(f"\n掃描 {cnt_total} 檔 / 多頭 {cnt_uptrend} / 追價 {cnt_momentum} / 回測 {cnt_pullback}")
+    return "\n".join(lines)

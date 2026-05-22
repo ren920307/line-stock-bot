@@ -539,6 +539,18 @@ def health_check_route(force: int = 0):
     return {"status": "ok", "message": "健檢已啟動，約 2 分鐘後推播到 LINE"}
 
 
+@app.get("/quality-scan")
+def quality_scan_route():
+    """對質量池186檔跑強弱掃描，約5分鐘後推播 LINE"""
+    def _run():
+        from market_scanner import scan_quality_pool
+        result = scan_quality_pool()
+        push(result)
+    t = threading.Thread(target=_run, daemon=False)
+    t.start()
+    return {"status": "ok", "message": "質量池掃描已啟動，約5分鐘後推播結果到 LINE"}
+
+
 @app.get("/quality-review")
 def quality_review_route():
     """月度質量池汰弱審查，約5分鐘跑完後推播 LINE"""
