@@ -165,6 +165,85 @@ def _is_uptrend(s: dict) -> bool:
     )
 
 
+CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩"
+
+
+def _fmt_momentum(i: int, s: dict) -> str:
+    chg_str  = f"+{s['chg_pct']:.1f}%"
+    high_tag = "⚠️ 近前高，留意壓力" if s["near_high"] else "✅ 強勢突破"
+    ma20 = int(s['ma20']) if s['ma20'] else "-"
+    ma60 = int(s['ma60']) if s['ma60'] else "-"
+    return (
+        f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
+        f"現價 {s['close']:.0f} 元（{chg_str}）/ 量比 {s['vol_ratio']:.1f}x\n"
+        f"MA20 {ma20} / MA60 {ma60} / {s['fib_pos']}\n"
+        f"{high_tag}"
+    )
+
+
+def _fmt_pullback(i: int, s: dict) -> str:
+    if s['chg_pct'] > 0:
+        chg_str = f"+{s['chg_pct']:.1f}%"
+    elif s['chg_pct'] < 0:
+        chg_str = f"{s['chg_pct']:.1f}%"
+    else:
+        chg_str = "0.0%"
+    ma_dir = "站上" if s['dist_ma20'] >= 0 else "跌破"
+    ma20 = int(s['ma20']) if s['ma20'] else "-"
+    ma60 = int(s['ma60']) if s['ma60'] else "-"
+    return (
+        f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
+        f"現價 {s['close']:.0f} 元（{chg_str}）/ 量比 {s['vol_ratio']:.1f}x\n"
+        f"MA20 {ma20}（{ma_dir} {abs(s['dist_ma20']):.1f}%）/ MA60 {ma60}"
+    )
+
+
+def _fmt_scan_result(
+    title: str, today: str,
+    top_m: list, top_p: list,
+    cnt_total: int, cnt_quote_ok: int, cnt_hist_ok: int,
+    cnt_uptrend: int, cnt_momentum: int, cnt_pullback: int,
+) -> str:
+    lines = [f"【{title}】 {today}"]
+
+    lines.append("")
+    if top_m:
+        lines.append(f"🔥 強勢追價 TOP {len(top_m)}")
+        lines.append("條件：漲幅 > 4% / 量比 > 2.0x / MA 多頭")
+        lines.append("策略：今日動能強，明日等回測")
+        for i, s in enumerate(top_m, 1):
+            lines.append("")
+            lines.append(_fmt_momentum(i, s))
+    else:
+        lines.append("🔥 強勢追價：今日無符合標的")
+
+    lines.append("")
+    if top_p:
+        fib_summary = top_p[0]['fib_pos'] if len(set(s['fib_pos'] for s in top_p)) == 1 else "費波中段"
+        lines.append(f"📉 回測進場 TOP {len(top_p)}")
+        lines.append(f"條件：近 5 日曾漲 > 3.5% / 今日縮量 / 距 MA20 在 8% 內 / {fib_summary}")
+        lines.append("策略：縮量回測，確認止跌 K 再進")
+        for i, s in enumerate(top_p, 1):
+            lines.append("")
+            lines.append(_fmt_pullback(i, s))
+    else:
+        lines.append("📉 回測進場：今日無符合標的")
+
+    lines.append(
+        "\n💡 操作提示\n"
+        "追價組：明日回測不破今日低才進，停損設今日低點下方。\n"
+        "回測組：確認止跌 K（紅 K / 下影線）再進，R:R ≥ 1:3。"
+    )
+    lines.append(
+        f"\n📊 掃描診斷\n"
+        f"總計 {cnt_total} 檔 / 報價 K 線正常 {min(cnt_quote_ok, cnt_hist_ok)} 檔"
+        f" / MA 多頭 {cnt_uptrend} 檔"
+        f" / 追價過關 {cnt_momentum} 檔"
+        f" / 回測過關 {cnt_pullback} 檔"
+    )
+    return "\n".join(lines)
+
+
 def _save_scan_log(momentum: list, pullback: list):
     try:
         try:
@@ -304,82 +383,13 @@ def run_daily_scan() -> str:
 
     _save_scan_log(top_m, top_p)
 
-    CIRCLE = "①②③④⑤⑥⑦⑧⑨⑩"
-    today  = date.today().strftime("%m/%d")
-
-    def fmt_momentum(i, s):
-        chg_str  = f"+{s['chg_pct']:.1f}%"
-        fib_str  = s['fib_pos']
-        high_tag = "⚠️ 近前高，留意壓力" if s["near_high"] else "✅ 強勢突破"
-        ma20 = int(s['ma20']) if s['ma20'] else "-"
-        ma60 = int(s['ma60']) if s['ma60'] else "-"
-        return (
-            f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
-            f"現價 {s['close']:.0f} 元（{chg_str}）/ 量比 {s['vol_ratio']:.1f}x\n"
-            f"MA20 {ma20} / MA60 {ma60} / {fib_str}\n"
-            f"{high_tag}"
-        )
-
-    def fmt_pullback(i, s):
-        if s['chg_pct'] > 0:
-            chg_str = f"+{s['chg_pct']:.1f}%"
-        elif s['chg_pct'] < 0:
-            chg_str = f"{s['chg_pct']:.1f}%"
-        else:
-            chg_str = "0.0%"
-        ma_dir = "站上" if s['dist_ma20'] >= 0 else "跌破"
-        ma20 = int(s['ma20']) if s['ma20'] else "-"
-        ma60 = int(s['ma60']) if s['ma60'] else "-"
-        return (
-            f"{CIRCLE[i-1]} {s['name']} ({s['code']})\n"
-            f"現價 {s['close']:.0f} 元（{chg_str}）/ 量比 {s['vol_ratio']:.1f}x\n"
-            f"MA20 {ma20}（{ma_dir} {abs(s['dist_ma20']):.1f}%）/ MA60 {ma60}"
-        )
-
-    lines = [f"【強勢股掃描】 {today}"]
-
-    # 強勢追價組
-    lines.append("")
-    if top_m:
-        lines.append(f"🔥 強勢追價 TOP {len(top_m)}")
-        lines.append("條件：漲幅 > 4% / 量比 > 2.0x / MA 多頭")
-        lines.append("策略：今日動能強，明日等回測")
-        for i, s in enumerate(top_m, 1):
-            lines.append("")
-            lines.append(fmt_momentum(i, s))
-    else:
-        lines.append("🔥 強勢追價：今日無符合標的")
-
-    # 回測進場組
-    lines.append("")
-    if top_p:
-        # 費波位置統一寫在條件裡，不重複顯示在每檔
-        fib_summary = top_p[0]['fib_pos'] if len(set(s['fib_pos'] for s in top_p)) == 1 else "費波中段"
-        lines.append(f"📉 回測進場 TOP {len(top_p)}")
-        lines.append(f"條件：近 5 日曾漲 > 3.5% / 今日縮量 / 距 MA20 在 8% 內 / {fib_summary}")
-        lines.append("策略：縮量回測，確認止跌 K 再進")
-        for i, s in enumerate(top_p, 1):
-            lines.append("")
-            lines.append(fmt_pullback(i, s))
-    else:
-        lines.append("📉 回測進場：今日無符合標的")
-
-    # 操作提示
-    lines.append(
-        "\n💡 操作提示\n"
-        "追價組：明日回測不破今日低才進，停損設今日低點下方。\n"
-        "回測組：確認止跌 K（紅 K / 下影線）再進，R:R ≥ 1:3。"
+    today = date.today().strftime("%m/%d")
+    return _fmt_scan_result(
+        "強勢股掃描", today,
+        top_m, top_p,
+        cnt_total, cnt_quote_ok, cnt_hist_ok,
+        cnt_uptrend, cnt_momentum, cnt_pullback,
     )
-
-    lines.append(
-        f"\n📊 掃描診斷\n"
-        f"總計 {cnt_total} 檔 / 報價 K 線正常 {min(cnt_quote_ok, cnt_hist_ok)} 檔"
-        f" / MA 多頭 {cnt_uptrend} 檔"
-        f" / 追價過關 {cnt_momentum} 檔"
-        f" / 回測過關 {cnt_pullback} 檔"
-    )
-
-    return "\n".join(lines)
 
 
 WATCHLIST_PATH = os.path.join(os.path.dirname(__file__), "watchlist.json")
@@ -465,37 +475,13 @@ def scan_quality_pool() -> str:
     if pullback_passed:
         pullback_passed.sort(key=lambda x: abs(x["dist_ma20"]))
 
-    top_m = momentum_passed[:8]
-    top_p = pullback_passed[:8]
+    top_m = momentum_passed[:5]
+    top_p = pullback_passed[:5]
 
-    today  = date.today().strftime("%m/%d")
-    CIRCLE = "①②③④⑤⑥⑦⑧"
-    lines  = [f"【質量池強勢掃描】{today}", f"共 {cnt_total} 檔 → MA多頭 {cnt_uptrend} 檔", ""]
-
-    if top_m:
-        lines.append(f"🚀 追價組 TOP{len(top_m)}")
-        for i, s in enumerate(top_m, 1):
-            chg_str  = f"+{s['chg_pct']:.1f}%"
-            high_tag = "⚠️近前高" if s["near_high"] else "✅強勢"
-            lines.append(
-                f"{CIRCLE[i-1]} {s['name']}({s['code']}) "
-                f"{s['close']:.0f}元 {chg_str} 量比{s['vol_ratio']:.1f}x {high_tag}"
-            )
-    else:
-        lines.append("🚀 追價組：今日無符合")
-
-    lines.append("")
-
-    if top_p:
-        lines.append(f"📉 回測組 TOP{len(top_p)}")
-        for i, s in enumerate(top_p, 1):
-            chg_str = f"+{s['chg_pct']:.1f}%" if s['chg_pct'] > 0 else f"{s['chg_pct']:.1f}%"
-            lines.append(
-                f"{CIRCLE[i-1]} {s['name']}({s['code']}) "
-                f"{s['close']:.0f}元 {chg_str} 距MA20:{s['dist_ma20']:+.1f}%"
-            )
-    else:
-        lines.append("📉 回測組：今日無符合")
-
-    lines.append(f"\n掃描 {cnt_total} 檔 / 多頭 {cnt_uptrend} / 追價 {cnt_momentum} / 回測 {cnt_pullback}")
-    return "\n".join(lines)
+    today = date.today().strftime("%m/%d")
+    return _fmt_scan_result(
+        "質量池掃描", today,
+        top_m, top_p,
+        cnt_total, cnt_quote_ok, cnt_hist_ok,
+        cnt_uptrend, cnt_momentum, cnt_pullback,
+    )
