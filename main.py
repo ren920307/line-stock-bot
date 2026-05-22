@@ -539,6 +539,18 @@ def health_check_route(force: int = 0):
     return {"status": "ok", "message": "健檢已啟動，約 2 分鐘後推播到 LINE"}
 
 
+@app.get("/quality-review")
+def quality_review_route():
+    """月度質量池汰弱審查，約5分鐘跑完後推播 LINE"""
+    def _run():
+        from quality_pool_review import run_review
+        run_review()
+        _push_watchlist_to_github()
+    t = threading.Thread(target=_run, daemon=False)
+    t.start()
+    return {"status": "ok", "message": "質量池審查已啟動，約5分鐘後推播結果到 LINE"}
+
+
 @app.get("/test-scan")
 def test_scan():
     """測試用：只跑前20檔，同步回傳結果"""
@@ -719,6 +731,15 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         if text == "#掃描":
             send("掃描中，請稍候...")
             send(scan_top15_msg())
+            continue
+
+        if text == "#汰弱確認":
+            if not is_me:
+                continue
+            from quality_pool_review import confirm_removal
+            result = confirm_removal()
+            _push_watchlist_to_github()
+            send_me(result)
             continue
 
         # 只限你的指令
