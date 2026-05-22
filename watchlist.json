@@ -1,14 +1,6 @@
 {
   "holdings": [
     {
-      "code": "00981A",
-      "name": "統一台股增強",
-      "cost": 28.75,
-      "stop": 27.7,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
       "code": "1785",
       "name": "光洋科",
       "cost": 157.72,
@@ -19,7 +11,7 @@
     {
       "code": "2337",
       "name": "旺宏",
-      "cost": 158.08,
+      "cost": 155.3,
       "stop": 150.0,
       "is_small": false,
       "max_position": 100
@@ -27,7 +19,7 @@
     {
       "code": "2449",
       "name": "京元電子",
-      "cost": 293.01,
+      "cost": 294.28,
       "stop": 307.7,
       "is_small": false,
       "max_position": 100
@@ -35,7 +27,7 @@
     {
       "code": "2455",
       "name": "全新",
-      "cost": 296.42,
+      "cost": 323.89,
       "stop": 382.5,
       "is_small": false,
       "max_position": 100
@@ -51,7 +43,7 @@
     {
       "code": "3189",
       "name": "景碩",
-      "cost": 387.55,
+      "cost": 406.75,
       "stop": 548.1,
       "is_small": false,
       "max_position": 100,
@@ -60,16 +52,16 @@
     {
       "code": "3260",
       "name": "威剛",
-      "cost": 271.53,
+      "cost": 271.65,
       "stop": 402.3,
       "is_small": false,
       "max_position": 100
     },
     {
-      "code": "3691",
-      "name": "碩禾",
-      "cost": 137.03,
-      "stop": 130.5,
+      "code": "4542",
+      "name": "4542",
+      "cost": 276.5,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
@@ -146,6 +138,26 @@
       "max_position": 100,
       "_archived": true,
       "sold_date": "2026-05-18"
+    },
+    {
+      "code": "00981A",
+      "name": "統一台股增強",
+      "cost": 28.75,
+      "stop": 27.7,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-22"
+    },
+    {
+      "code": "3691",
+      "name": "碩禾",
+      "cost": 137.03,
+      "stop": 130.5,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-05-22"
     }
   ],
   "themes": {
