@@ -36,7 +36,7 @@
       "code": "2455",
       "name": "全新",
       "cost": 296.42,
-      "stop": 360.4,
+      "stop": 382.5,
       "is_small": false,
       "max_position": 100
     },
@@ -52,9 +52,10 @@
       "code": "3189",
       "name": "景碩",
       "cost": 387.55,
-      "stop": 498.6,
+      "stop": 548.1,
       "is_small": false,
-      "max_position": 100
+      "max_position": 100,
+      "tp1_done": true
     },
     {
       "code": "3260",
@@ -68,7 +69,7 @@
       "code": "3691",
       "name": "碩禾",
       "cost": 137.03,
-      "stop": 129.7,
+      "stop": 130.5,
       "is_small": false,
       "max_position": 100
     },
