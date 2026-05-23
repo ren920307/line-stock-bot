@@ -185,18 +185,34 @@ def _job_daily_scan():
         _scan_lock.release()
 
 def _job_weekly_report():
+    # 只在台北時間週五 15:00–18:30 內執行，防止 GitHub Actions 延遲觸發重跑
+    from datetime import time as dtime
+    _tz_tp = pytz.timezone("Asia/Taipei")
+    now_tp = datetime.now(_tz_tp)
+    in_window = (now_tp.weekday() == 4 and
+                 dtime(15, 0) <= now_tp.time() <= dtime(18, 30))
+    if not in_window:
+        print(f"[weekly] 時間窗外（{now_tp.strftime('%a %H:%M')} TST），跳過")
+        return
+
     if _already_done_today(WEEKLY_FLAG_PATH):
         return
     _mark_done_today(WEEKLY_FLAG_PATH)
     try:
         result = build_weekly_report()
-        push(result)
+        if result:
+            push(result)
+        else:
+            print("[weekly] 現價資料未就緒，跳過推播")
     except Exception as e:
         push(f"❌ 週報失敗：{e}")
     try:
         from backtest_weekly import build_backtest_report
         bt = build_backtest_report()
-        push(bt)
+        if bt:
+            push(bt)
+        else:
+            print("[weekly] 模擬操盤資料未就緒，跳過推播")
     except Exception as e:
         import traceback
         push(f"❌ 模擬操盤失敗：{e}\n{traceback.format_exc()[-300:]}")

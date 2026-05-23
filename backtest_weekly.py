@@ -230,6 +230,11 @@ def build_backtest_report() -> str:
         time.sleep(1.2)
         pullback_results.append(_simulate(code, name, d_iso, week_end))
 
+    # 全部是錯誤（無 K 線資料），跳過不推播
+    all_results = momentum_results + pullback_results
+    if all_results and all("error" in r for r in all_results):
+        return None
+
     monday_str = monday.strftime("%m/%d")
     today_str  = today.strftime("%m/%d")
     lines = [f"📊 本週模擬操盤｜{monday_str}~{today_str}（每份 10 萬）"]

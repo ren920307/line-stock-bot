@@ -51,6 +51,10 @@ def build_weekly_report() -> str:
         if q and q.get("close"):
             current_prices[code] = q["close"]
 
+    # 現價全部抓不到，跳過不推播
+    if not current_prices:
+        return None
+
     # 組報告
     lines = [
         f"📊 本週選股績效｜{monday_str}~{today_str}",
