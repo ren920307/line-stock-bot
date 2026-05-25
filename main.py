@@ -168,6 +168,12 @@ def _job_update_universe():
 def _job_daily_scan():
     if _already_scanned_today():
         return
+    from datetime import time as dtime
+    _tz_tp = pytz.timezone("Asia/Taipei")
+    now_tp = datetime.now(_tz_tp)
+    if not (dtime(13, 30) <= now_tp.time() <= dtime(20, 0)):
+        print(f"[scan] 時間窗外（{now_tp.strftime('%H:%M')} TST），跳過")
+        return
     if not _scan_lock.acquire(blocking=False):
         return
     try:
