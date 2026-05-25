@@ -10,8 +10,8 @@ on:
     - cron: "0 8 * * 1-5"
     # 每週五台北 16:30 = UTC 08:30，週報
     - cron: "30 8 * * 5"
-    # 每月1日台北 09:30 = UTC 01:30，質量池月審
-    - cron: "30 1 1 * *"
+    # 每週一台北 09:30 = UTC 01:30，質量池週審
+    - cron: "30 1 * * 1"
   workflow_dispatch:
     inputs:
       task:
@@ -49,10 +49,10 @@ jobs:
             echo "task=weekly-report" >> $GITHUB_OUTPUT
           elif [ "${{ github.event.schedule }}" = "0 8 * * 1-5" ]; then
             echo "task=health-check" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "30 1 * * 1" ]; then
+            echo "task=quality-review" >> $GITHUB_OUTPUT
           elif [ "${{ github.event.schedule }}" = "0 1 * * 1-5" ]; then
             echo "task=update-universe" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.schedule }}" = "30 1 1 * *" ]; then
-            echo "task=quality-review" >> $GITHUB_OUTPUT
           else
             echo "task=daily-scan" >> $GITHUB_OUTPUT
           fi

@@ -18,8 +18,10 @@ from datetime import date
 import requests
 
 WATCHLIST_PATH = os.path.join(os.path.dirname(__file__), "watchlist.json")
+UNIVERSE_PATH  = os.path.join(os.path.dirname(__file__), "universe.json")
 BENCHMARK_CODE = "0050"
 WEAK_THRESHOLD = 40
+POOL_TARGET    = 200
 HISTORY_DAYS   = 90   # 抓90天，確保有足夠K棒算60MA
 
 
@@ -100,6 +102,52 @@ def _score(closes, volumes, bench_ret60: float) -> dict | None:
     }
 
 
+# ── 補充 ─────────────────────────────────────────────
+def replenish_pool(bench_ret60: float) -> list[dict]:
+    """從 universe.json 挑分數 ≥ 40 的候選補進質量池，直到達 POOL_TARGET 檔。
+    回傳新增的股票清單。"""
+    with open(WATCHLIST_PATH, encoding="utf-8") as f:
+        data = json.load(f)
+    pool = data.get("quality_pool", [])
+    needed = POOL_TARGET - len(pool)
+    if needed <= 0:
+        return []
+
+    try:
+        with open(UNIVERSE_PATH, encoding="utf-8") as f:
+            universe = json.load(f).get("stocks", [])
+    except Exception:
+        return []
+
+    pool_codes = {s["code"] for s in pool}
+    candidates = [s for s in universe if s["code"] not in pool_codes]
+
+    added = []
+    for i, stock in enumerate(candidates):
+        if len(added) >= needed:
+            break
+        try:
+            closes, volumes = _fetch_history(stock["code"])
+            detail = _score(closes, volumes, bench_ret60)
+            if detail and detail["score"] >= WEAK_THRESHOLD:
+                pool.append({"code": stock["code"], "name": stock["name"], "market": stock.get("market", "TSE")})
+                added.append({"code": stock["code"], "name": stock["name"], "score": detail["score"]})
+                print(f"  ✅ 補入 {stock['code']} {stock['name']} {detail['score']}分")
+        except RuntimeError:
+            time.sleep(2)
+        except Exception as e:
+            print(f"  跳過 {stock['code']}: {e}")
+        if (i + 1) % 3 == 0:
+            time.sleep(1.1)
+
+    if added:
+        data["quality_pool"] = pool
+        with open(WATCHLIST_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return added
+
+
 # ── 主流程 ───────────────────────────────────────────
 def run_review(dry_run: bool = False) -> list[dict]:
     """跑完整審查，回傳所有結果（含分數）。dry_run=True 只計算不推播。"""
@@ -138,35 +186,43 @@ def run_review(dry_run: bool = False) -> list[dict]:
 
     print(f"\n[quality_review] 完成。共 {len(results)} 檔有效，{len(weak)} 檔低分（<{WEAK_THRESHOLD}分）")
 
+    added = []
     if not dry_run:
-        _push_report(results, weak)
+        _save_pending_removal(weak)
+        # 先移除弱股，再補充
+        if weak:
+            confirm_removal()
+        added = replenish_pool(bench_ret60)
+        _push_report(results, weak, added)
 
     return results
 
 
-def _push_report(results: list[dict], weak: list[dict]):
-    """推播審查結果到 LINE。"""
-    today = date.today().isoformat()
-    total = len(results)
+def _push_report(results: list[dict], weak: list[dict], added: list[dict]):
+    """推播週審結果到 LINE。"""
+    with open(WATCHLIST_PATH, encoding="utf-8") as f:
+        pool_now = len(json.load(f).get("quality_pool", []))
 
-    if not weak:
-        msg = f"[質量池月審 {today}]\n共 {total} 檔，全數通過，無建議汰除。"
-    else:
-        lines = [f"[質量池月審 {today}]"]
-        lines.append(f"共 {total} 檔，建議汰除 {len(weak)} 檔：\n")
+    today = date.today().isoformat()
+    lines = [f"[質量池週審 {today}]"]
+    lines.append(f"池子現有 {pool_now} 檔（目標 {POOL_TARGET}）\n")
+
+    if weak:
+        lines.append(f"汰除 {len(weak)} 檔：")
         for r in weak:
             ma_tag = "站上" if r["above_ma60"] else "破下"
-            lines.append(
-                f"❌ {r['code']} {r['name']}  {r['score']}分\n"
-                f"   RS={r['rs']:+.1f}%｜60MA:{ma_tag}｜量比:{r['vol_ratio']}"
-            )
-        lines.append("\n如確認汰除，請傳「#汰弱確認」")
-        msg = "\n".join(lines)
+            lines.append(f"  ❌ {r['code']} {r['name']} {r['score']}分｜RS={r['rs']:+.1f}%｜MA60:{ma_tag}")
+    else:
+        lines.append("無汰除股。")
 
-    _line_push(msg)
+    if added:
+        lines.append(f"\n補入 {len(added)} 檔：")
+        for s in added:
+            lines.append(f"  ✅ {s['code']} {s['name']} {s['score']}分")
+    else:
+        lines.append("無新增股（universe 候選均未達門檻）。")
 
-    # 同時存一份待確認名單到 watchlist.json
-    _save_pending_removal(weak)
+    _line_push("\n".join(lines))
 
 
 def _save_pending_removal(weak: list[dict]):

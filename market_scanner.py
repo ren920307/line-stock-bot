@@ -478,6 +478,8 @@ def scan_quality_pool() -> str:
     top_m = momentum_passed[:5]
     top_p = pullback_passed[:5]
 
+    _save_scan_log(top_m, top_p)
+
     today = date.today().strftime("%m/%d")
     return _fmt_scan_result(
         "質量池掃描", today,

@@ -9,7 +9,7 @@ from twse_fetcher import fetch
 from claude_analyzer import deep_analyze
 from stock_names import resolve, get_name
 from commands import cmd_market, cmd_holdings, cmd_scan, cmd_health_check
-from market_scanner import run_daily_scan
+from market_scanner import run_daily_scan, scan_quality_pool
 from universe_builder import build_universe
 from weekly_report import build_weekly_report
 import pandas as pd
@@ -182,7 +182,7 @@ def _job_daily_scan():
             print("[scan] FUGLE_API_KEY 未就緒，跳過，等 fallback 補跑")
             return
         _mark_scan_done()
-        result = run_daily_scan()
+        result = scan_quality_pool()
         push(result)
     except Exception as e:
         import traceback
