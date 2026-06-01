@@ -1,10 +1,26 @@
 {
   "holdings": [
     {
+      "code": "00981A",
+      "name": "統一台股增強",
+      "cost": 28.75,
+      "stop": 27.7,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
       "code": "1785",
       "name": "光洋科",
       "cost": 157.72,
-      "stop": 139.6,
+      "stop": 134.1,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "2313",
+      "name": "華通",
+      "cost": 291.41,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
@@ -35,7 +51,7 @@
     {
       "code": "3030",
       "name": "德律",
-      "cost": 362.75,
+      "cost": 375.72,
       "stop": 393.8,
       "is_small": false,
       "max_position": 1500
@@ -62,14 +78,6 @@
       "name": "4542",
       "cost": 276.5,
       "stop": 444.6,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
-      "code": "4768",
-      "name": "晶呈科技",
-      "cost": 511.69,
-      "stop": 484.0,
       "is_small": false,
       "max_position": 100
     },
@@ -140,16 +148,6 @@
       "sold_date": "2026-05-18"
     },
     {
-      "code": "00981A",
-      "name": "統一台股增強",
-      "cost": 28.75,
-      "stop": 27.7,
-      "is_small": false,
-      "max_position": 100,
-      "_archived": true,
-      "sold_date": "2026-05-22"
-    },
-    {
       "code": "3691",
       "name": "碩禾",
       "cost": 137.03,
@@ -158,6 +156,16 @@
       "max_position": 100,
       "_archived": true,
       "sold_date": "2026-05-22"
+    },
+    {
+      "code": "4768",
+      "name": "晶呈科技",
+      "cost": 511.69,
+      "stop": 484.0,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-06-01"
     }
   ],
   "themes": {
