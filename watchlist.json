@@ -12,7 +12,7 @@
       "code": "2313",
       "name": "華通",
       "cost": 295.5,
-      "stop": 256.0,
+      "stop": 257.2,
       "is_small": false,
       "max_position": 100
     },
@@ -69,7 +69,7 @@
       "code": "4542",
       "name": "4542",
       "cost": 276.89,
-      "stop": 242.1,
+      "stop": 310.9,
       "is_small": false,
       "max_position": 100
     },
