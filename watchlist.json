@@ -4,7 +4,7 @@
       "code": "1785",
       "name": "光洋科",
       "cost": 157.72,
-      "stop": 139.0,
+      "stop": 139.3,
       "is_small": false,
       "max_position": 100
     },
@@ -12,7 +12,7 @@
       "code": "2337",
       "name": "旺宏",
       "cost": 155.3,
-      "stop": 150.1,
+      "stop": 151.4,
       "is_small": false,
       "max_position": 100
     },
@@ -44,7 +44,7 @@
       "code": "3189",
       "name": "景碩",
       "cost": 406.75,
-      "stop": 635.4,
+      "stop": 651.6,
       "is_small": false,
       "max_position": 100,
       "tp1_done": true
@@ -61,7 +61,7 @@
       "code": "4542",
       "name": "4542",
       "cost": 276.5,
-      "stop": 340.2,
+      "stop": 366.3,
       "is_small": false,
       "max_position": 100
     },
