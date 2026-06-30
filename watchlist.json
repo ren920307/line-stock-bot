@@ -44,7 +44,7 @@
       "code": "3189",
       "name": "景碩",
       "cost": 406.75,
-      "stop": 730.8,
+      "stop": 801.9,
       "is_small": false,
       "max_position": 100,
       "tp1_done": true
@@ -61,7 +61,7 @@
       "code": "4542",
       "name": "4542",
       "cost": 276.5,
-      "stop": 368.1,
+      "stop": 404.6,
       "is_small": false,
       "max_position": 100
     },
@@ -801,20 +801,8 @@
       "name": "茂達"
     },
     {
-      "code": "2455",
-      "name": "全新"
-    },
-    {
       "code": "5274",
       "name": "信驊"
-    },
-    {
-      "code": "4966",
-      "name": "譜瑞-KY"
-    },
-    {
-      "code": "3105",
-      "name": "穩懋"
     },
     {
       "code": "2458",
@@ -831,10 +819,6 @@
     {
       "code": "2382",
       "name": "廣達"
-    },
-    {
-      "code": "6669",
-      "name": "緯穎"
     },
     {
       "code": "3231",
@@ -859,10 +843,6 @@
     {
       "code": "2377",
       "name": "微星"
-    },
-    {
-      "code": "8210",
-      "name": "勤誠"
     },
     {
       "code": "2324",
@@ -897,20 +877,12 @@
       "name": "台燿"
     },
     {
-      "code": "2368",
-      "name": "金像電"
-    },
-    {
       "code": "3044",
       "name": "健鼎"
     },
     {
       "code": "6269",
       "name": "台郡"
-    },
-    {
-      "code": "2355",
-      "name": "敬鵬"
     },
     {
       "code": "2327",
@@ -937,16 +909,8 @@
       "name": "信昌電"
     },
     {
-      "code": "3081",
-      "name": "聯亞"
-    },
-    {
       "code": "4908",
       "name": "前鼎"
-    },
-    {
-      "code": "6285",
-      "name": "啟碁"
     },
     {
       "code": "2345",
@@ -985,28 +949,12 @@
       "name": "川湖"
     },
     {
-      "code": "2308",
-      "name": "台達電"
-    },
-    {
       "code": "1590",
       "name": "亞德客-KY"
     },
     {
       "code": "2301",
       "name": "光寶科"
-    },
-    {
-      "code": "4915",
-      "name": "致伸"
-    },
-    {
-      "code": "2392",
-      "name": "正崴"
-    },
-    {
-      "code": "6515",
-      "name": "穎崴"
     },
     {
       "code": "6271",
@@ -1041,10 +989,6 @@
       "name": "金居"
     },
     {
-      "code": "3680",
-      "name": "家登精密"
-    },
-    {
       "code": "6278",
       "name": "台表科"
     },
@@ -1069,16 +1013,8 @@
       "name": "旺矽"
     },
     {
-      "code": "2360",
-      "name": "致茂"
-    },
-    {
       "code": "3583",
       "name": "辛耘"
-    },
-    {
-      "code": "2049",
-      "name": "上銀"
     },
     {
       "code": "1597",
@@ -1107,10 +1043,6 @@
     {
       "code": "1503",
       "name": "士電"
-    },
-    {
-      "code": "1504",
-      "name": "東元"
     },
     {
       "code": "6409",
@@ -1181,18 +1113,6 @@
       "name": "佳世達"
     },
     {
-      "code": "6277",
-      "name": "宏正"
-    },
-    {
-      "code": "2393",
-      "name": "億光"
-    },
-    {
-      "code": "3714",
-      "name": "富采"
-    },
-    {
       "code": "9921",
       "name": "巨大"
     },
@@ -1205,16 +1125,8 @@
       "name": "台化"
     },
     {
-      "code": "1101",
-      "name": "台泥"
-    },
-    {
       "code": "1216",
       "name": "統一"
-    },
-    {
-      "code": "2912",
-      "name": "統一超"
     },
     {
       "code": "2618",
@@ -1274,19 +1186,9 @@
       "market": "TSE"
     },
     {
-      "code": "6510",
-      "name": "精測",
-      "market": "OTC"
-    },
-    {
       "code": "8996",
       "name": "高力",
       "market": "TSE"
-    },
-    {
-      "code": "4991",
-      "name": "環宇-KY",
-      "market": "OTC"
     },
     {
       "code": "2484",
@@ -1316,11 +1218,6 @@
     {
       "code": "3048",
       "name": "益登",
-      "market": "TSE"
-    },
-    {
-      "code": "8039",
-      "name": "台虹",
       "market": "TSE"
     },
     {
@@ -1379,16 +1276,6 @@
       "market": "TSE"
     },
     {
-      "code": "6187",
-      "name": "萬潤",
-      "market": "OTC"
-    },
-    {
-      "code": "3211",
-      "name": "順達",
-      "market": "OTC"
-    },
-    {
       "code": "1714",
       "name": "和桐",
       "market": "TSE"
@@ -1404,11 +1291,6 @@
       "market": "TSE"
     },
     {
-      "code": "7734",
-      "name": "印能科技",
-      "market": "OTC"
-    },
-    {
       "code": "6691",
       "name": "洋基工程",
       "market": "TSE"
@@ -1421,11 +1303,6 @@
     {
       "code": "5328",
       "name": "華容",
-      "market": "OTC"
-    },
-    {
-      "code": "3131",
-      "name": "弘塑",
       "market": "OTC"
     },
     {
@@ -1449,11 +1326,6 @@
       "market": "TSE"
     },
     {
-      "code": "2609",
-      "name": "陽明",
-      "market": "TSE"
-    },
-    {
       "code": "2464",
       "name": "盟立",
       "market": "TSE"
@@ -1466,11 +1338,6 @@
     {
       "code": "2542",
       "name": "興富發",
-      "market": "TSE"
-    },
-    {
-      "code": "2413",
-      "name": "環科",
       "market": "TSE"
     },
     {
@@ -1502,11 +1369,6 @@
       "code": "8182",
       "name": "加高",
       "market": "OTC"
-    },
-    {
-      "code": "5871",
-      "name": "中租-KY",
-      "market": "TSE"
     },
     {
       "code": "3221",
@@ -1586,6 +1448,166 @@
     {
       "code": "3236",
       "name": "千如",
+      "market": "OTC"
+    },
+    {
+      "code": "3374",
+      "name": "精材",
+      "market": "OTC"
+    },
+    {
+      "code": "6217",
+      "name": "中探針",
+      "market": "OTC"
+    },
+    {
+      "code": "3707",
+      "name": "漢磊",
+      "market": "OTC"
+    },
+    {
+      "code": "6584",
+      "name": "南俊國際",
+      "market": "OTC"
+    },
+    {
+      "code": "6291",
+      "name": "沛亨",
+      "market": "OTC"
+    },
+    {
+      "code": "6548",
+      "name": "長科*",
+      "market": "OTC"
+    },
+    {
+      "code": "5392",
+      "name": "能率",
+      "market": "OTC"
+    },
+    {
+      "code": "5386",
+      "name": "青雲",
+      "market": "OTC"
+    },
+    {
+      "code": "8054",
+      "name": "安國",
+      "market": "OTC"
+    },
+    {
+      "code": "3479",
+      "name": "安勤",
+      "market": "OTC"
+    },
+    {
+      "code": "3317",
+      "name": "尼克森",
+      "market": "OTC"
+    },
+    {
+      "code": "6127",
+      "name": "九豪",
+      "market": "OTC"
+    },
+    {
+      "code": "8040",
+      "name": "九暘",
+      "market": "OTC"
+    },
+    {
+      "code": "7777",
+      "name": "能率亞洲",
+      "market": "OTC"
+    },
+    {
+      "code": "6435",
+      "name": "大中",
+      "market": "OTC"
+    },
+    {
+      "code": "8227",
+      "name": "巨有科技",
+      "market": "OTC"
+    },
+    {
+      "code": "6270",
+      "name": "倍微",
+      "market": "OTC"
+    },
+    {
+      "code": "8936",
+      "name": "國統",
+      "market": "OTC"
+    },
+    {
+      "code": "5464",
+      "name": "霖宏",
+      "market": "OTC"
+    },
+    {
+      "code": "6138",
+      "name": "茂達",
+      "market": "OTC"
+    },
+    {
+      "code": "4973",
+      "name": "廣穎",
+      "market": "OTC"
+    },
+    {
+      "code": "4939",
+      "name": "亞電",
+      "market": "OTC"
+    },
+    {
+      "code": "8071",
+      "name": "能率網通",
+      "market": "OTC"
+    },
+    {
+      "code": "6121",
+      "name": "新普",
+      "market": "OTC"
+    },
+    {
+      "code": "4707",
+      "name": "磐亞",
+      "market": "OTC"
+    },
+    {
+      "code": "6829",
+      "name": "千附精密",
+      "market": "OTC"
+    },
+    {
+      "code": "3234",
+      "name": "光環",
+      "market": "OTC"
+    },
+    {
+      "code": "3455",
+      "name": "由田",
+      "market": "OTC"
+    },
+    {
+      "code": "8091",
+      "name": "翔名",
+      "market": "OTC"
+    },
+    {
+      "code": "8255",
+      "name": "朋程",
+      "market": "OTC"
+    },
+    {
+      "code": "4716",
+      "name": "大立",
+      "market": "OTC"
+    },
+    {
+      "code": "5864",
+      "name": "致和證",
       "market": "OTC"
     }
   ]
