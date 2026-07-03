@@ -1,18 +1,18 @@
 {
   "holdings": [
     {
-      "code": "1785",
-      "name": "光洋科",
-      "cost": 157.72,
-      "stop": 134.1,
+      "code": "00631L",
+      "name": "00631L",
+      "cost": 34.6,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
     {
-      "code": "2313",
-      "name": "華通",
-      "cost": 288.61,
-      "stop": null,
+      "code": "00981A",
+      "name": "統一台股增強",
+      "cost": 28.12,
+      "stop": 27.7,
       "is_small": false,
       "max_position": 100
     },
@@ -35,15 +35,15 @@
     {
       "code": "2455",
       "name": "全新",
-      "cost": 323.89,
-      "stop": 385.2,
+      "cost": 351.78,
+      "stop": 382.5,
       "is_small": false,
       "max_position": 100
     },
     {
       "code": "3030",
       "name": "德律",
-      "cost": 375.72,
+      "cost": 368.72,
       "stop": 393.8,
       "is_small": false,
       "max_position": 1500
@@ -51,8 +51,8 @@
     {
       "code": "3189",
       "name": "景碩",
-      "cost": 406.75,
-      "stop": 801.9,
+      "cost": 405.23,
+      "stop": 548.1,
       "is_small": false,
       "max_position": 100,
       "tp1_done": true
@@ -66,26 +66,42 @@
       "max_position": 100
     },
     {
-      "code": "3693",
-      "name": "營邦",
-      "cost": 676.18,
-      "stop": 624.2,
+      "code": "3357",
+      "name": "3357",
+      "cost": 341.41,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
     {
-      "code": "4542",
-      "name": "4542",
-      "cost": 276.5,
-      "stop": 444.6,
+      "code": "3711",
+      "name": "日月光投控",
+      "cost": 630.32,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
     {
-      "code": "4768",
-      "name": "晶呈科技",
-      "cost": 511.69,
-      "stop": 484.0,
+      "code": "6147",
+      "name": "6147",
+      "cost": 239.79,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "8150",
+      "name": "南茂",
+      "cost": 98.71,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
+      "code": "8261",
+      "name": "富鼎",
+      "cost": 260.37,
+      "stop": null,
       "is_small": false,
       "max_position": 100
     },
@@ -156,14 +172,54 @@
       "sold_date": "2026-05-22"
     },
     {
-      "code": "00981A",
-      "name": "統一台股增強",
-      "cost": 28.75,
-      "stop": 27.7,
+      "code": "1785",
+      "name": "光洋科",
+      "cost": 157.72,
+      "stop": 134.1,
       "is_small": false,
       "max_position": 100,
       "_archived": true,
-      "sold_date": "2026-06-02"
+      "sold_date": "2026-07-03"
+    },
+    {
+      "code": "2313",
+      "name": "華通",
+      "cost": 288.61,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-07-03"
+    },
+    {
+      "code": "3693",
+      "name": "營邦",
+      "cost": 676.18,
+      "stop": 624.2,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-07-03"
+    },
+    {
+      "code": "4542",
+      "name": "4542",
+      "cost": 276.89,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-07-03"
+    },
+    {
+      "code": "4768",
+      "name": "晶呈科技",
+      "cost": 511.69,
+      "stop": 484.0,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-07-03"
     }
   ],
   "themes": {
