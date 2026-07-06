@@ -49,6 +49,14 @@
       "max_position": 1500
     },
     {
+      "code": "3042",
+      "name": "晶技",
+      "cost": 239.0,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
       "code": "3189",
       "name": "景碩",
       "cost": 405.23,
