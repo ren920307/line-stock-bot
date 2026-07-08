@@ -4,7 +4,7 @@
       "code": "00631L",
       "name": "00631L",
       "cost": 34.6,
-      "stop": 36.3,
+      "stop": 36.4,
       "is_small": false,
       "max_position": 100
     },
@@ -85,7 +85,7 @@
       "code": "3711",
       "name": "日月光投控",
       "cost": 630.32,
-      "stop": 613.2,
+      "stop": 615.9,
       "is_small": false,
       "max_position": 100
     },
