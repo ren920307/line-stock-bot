@@ -66,14 +66,6 @@
       "tp1_done": true
     },
     {
-      "code": "3260",
-      "name": "威剛",
-      "cost": 271.65,
-      "stop": 402.3,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
       "code": "3357",
       "name": "3357",
       "cost": 341.41,
@@ -228,6 +220,16 @@
       "max_position": 100,
       "_archived": true,
       "sold_date": "2026-07-03"
+    },
+    {
+      "code": "3260",
+      "name": "威剛",
+      "cost": 271.65,
+      "stop": 402.3,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-07-08"
     }
   ],
   "themes": {
