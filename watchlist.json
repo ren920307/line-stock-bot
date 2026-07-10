@@ -27,7 +27,7 @@
     {
       "code": "2449",
       "name": "京元電子",
-      "cost": 294.28,
+      "cost": 297.57,
       "stop": 312.8,
       "is_small": false,
       "max_position": 100
@@ -76,7 +76,7 @@
     {
       "code": "3711",
       "name": "日月光投控",
-      "cost": 630.32,
+      "cost": 634.38,
       "stop": null,
       "is_small": false,
       "max_position": 100
@@ -100,7 +100,7 @@
     {
       "code": "8261",
       "name": "富鼎",
-      "cost": 260.37,
+      "cost": 255.37,
       "stop": null,
       "is_small": false,
       "max_position": 100
