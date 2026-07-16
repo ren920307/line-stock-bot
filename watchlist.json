@@ -85,7 +85,7 @@
       "code": "3711",
       "name": "日月光投控",
       "cost": 630.32,
-      "stop": 635.7,
+      "stop": 640.1,
       "is_small": false,
       "max_position": 100
     },
@@ -101,7 +101,7 @@
       "code": "8150",
       "name": "南茂",
       "cost": 98.71,
-      "stop": 105.3,
+      "stop": 110.2,
       "is_small": false,
       "max_position": 100
     },
