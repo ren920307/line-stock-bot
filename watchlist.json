@@ -33,14 +33,6 @@
       "max_position": 100
     },
     {
-      "code": "2455",
-      "name": "全新",
-      "cost": 351.78,
-      "stop": 382.5,
-      "is_small": false,
-      "max_position": 100
-    },
-    {
       "code": "3030",
       "name": "德律",
       "cost": 368.72,
@@ -230,6 +222,16 @@
       "max_position": 100,
       "_archived": true,
       "sold_date": "2026-07-31"
+    },
+    {
+      "code": "2455",
+      "name": "全新",
+      "cost": 351.78,
+      "stop": 382.5,
+      "is_small": false,
+      "max_position": 100,
+      "_archived": true,
+      "sold_date": "2026-08-27"
     }
   ],
   "themes": {
