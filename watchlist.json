@@ -19,7 +19,7 @@
     {
       "code": "2337",
       "name": "旺宏",
-      "cost": 151.55,
+      "cost": 151.57,
       "stop": 167.0,
       "is_small": false,
       "max_position": 100
@@ -51,7 +51,7 @@
     {
       "code": "3189",
       "name": "景碩",
-      "cost": 405.23,
+      "cost": 479.52,
       "stop": 548.1,
       "is_small": false,
       "max_position": 100,
@@ -68,7 +68,7 @@
     {
       "code": "3711",
       "name": "日月光投控",
-      "cost": 632.64,
+      "cost": 632.7,
       "stop": null,
       "is_small": false,
       "max_position": 100
