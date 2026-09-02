@@ -17,6 +17,14 @@
       "max_position": 100
     },
     {
+      "code": "2308",
+      "name": "台達電",
+      "cost": 1770.0,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
       "code": "2337",
       "name": "旺宏",
       "cost": 151.57,
