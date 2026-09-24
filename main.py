@@ -398,10 +398,18 @@ def build_price_summary(code: str) -> str:
         f"TP1(1.272)：{fib['tp1']}　TP2(1.618)：{fib['tp2']}"
     )
 
+    ma5, ma20, ma60 = last["MA5"], last["MA20"], last["MA60"]
+    if close > ma5 > ma20 > ma60:
+        ma_state = "多頭排列"
+    elif close < ma5 < ma20 < ma60:
+        ma_state = "空頭排列"
+    else:
+        ma_state = "均線糾結"  # ponytail: MA60 不足 60 日時為 NaN，比較全 False，落在這裡
+
     return (
         f"收盤 {close:.0f} 元 ( {chg_label} )\n"
         f"開 {open_:.1f}　高 {high:.1f}　低 {low:.1f}　量 {vol//1000:,} 張\n"
-        f"MA5 {last['MA5']:.1f} / MA20 {last['MA20']:.1f} / MA60 {last['MA60']:.1f}\n"
+        f"MA5 {ma5:.1f} / MA20 {ma20:.1f} / MA60 {ma60:.1f}（{ma_state}）\n"
         f"60日高 {high60:.0f} / 低 {low60:.0f}\n"
         f"{fib_block}\n"
         f"\n近10日K線：\n{recent}"
