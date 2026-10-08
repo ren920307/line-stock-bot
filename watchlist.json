@@ -17,6 +17,14 @@
       "max_position": 100
     },
     {
+      "code": "1802",
+      "name": "台玻",
+      "cost": 66.6,
+      "stop": null,
+      "is_small": false,
+      "max_position": 100
+    },
+    {
       "code": "2308",
       "name": "台達電",
       "cost": 1772.52,
