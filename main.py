@@ -42,7 +42,7 @@ def _github_headers() -> dict:
 def _pull_health_log_from_github() -> bool:
     try:
         url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/health_log.json"
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, headers=_github_headers(), timeout=10)
         if r.status_code == 200:
             with open(HEALTH_LOG_PATH, "w", encoding="utf-8") as f:
                 f.write(r.text)
@@ -638,7 +638,7 @@ def pull_watchlist():
     try:
         import requests as _req
         url = "https://raw.githubusercontent.com/ren920307/line-stock-bot/main/watchlist.json"
-        r = _req.get(url, timeout=10)
+        r = _req.get(url, headers=_github_headers(), timeout=10)  # repo 私人，要帶 token
         if r.status_code == 200:
             with open(os.path.join(os.path.dirname(__file__), "watchlist.json"), "w", encoding="utf-8") as f:
                 f.write(r.text)

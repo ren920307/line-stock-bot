@@ -61,7 +61,8 @@ def _pull_scan_log_from_github() -> bool:
     """啟動時從 GitHub raw 拉一次，確保本地有最新資料。回傳是否成功。"""
     try:
         url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE}"
-        r = requests.get(url, timeout=10)
+        headers = {"Authorization": f"Bearer {os.environ.get('GITHUB_TOKEN', '')}"}  # repo 私人，要帶 token
+        r = requests.get(url, headers=headers, timeout=10)
         if r.status_code == 200:
             with open(SCAN_LOG_PATH, "w", encoding="utf-8") as f:
                 f.write(r.text)
